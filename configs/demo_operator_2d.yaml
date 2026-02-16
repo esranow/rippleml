@@ -1,0 +1,13 @@
+name: demo_operator_2d
+task: operator_learning
+model:
+  type: fno2d
+  modes1: 12
+  modes2: 12
+  width: 32
+training:
+  epochs: 500
+  batch_size: 16
+  learning_rate: 0.001
+data:
+  resolution: [64, 64]

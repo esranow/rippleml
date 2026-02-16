@@ -1,0 +1,12 @@
+name: demo_pinn_1d
+task: physics_informed_neural_network
+model:
+  type: mlp
+  architecture: [1, 50, 50, 50, 1]
+  activation: tanh
+training:
+  epochs: 1000
+  learning_rate: 0.001
+data:
+  domain: [-1.0, 1.0]
+  num_points: 100

@@ -1,0 +1,31 @@
+# Demo Blocks Playground Configuration
+# Run: python -m TensorWAV.cli --config TensorWAV/configs/demo_blocks_playground.yaml
+
+task: physics_informed_neural_network
+
+model:
+  type: mlp
+  input_dim: 2
+  output_dim: 1
+  hidden_layers: [32, 32]
+  activation: tanh
+
+training:
+  epochs: 5
+  learning_rate: 0.001
+  optimizer: adam
+  device: cpu
+  save_dir: ./checkpoints_blocks_demo
+  save_freq: 5
+
+blocks:
+  - type: spectral
+    n_modes: 64
+    cutoff: 16
+    use_correction: true
+  - type: energy
+    c: 1.0
+    spatial_dim: 1
+
+data:
+  domain: [-1.0, 1.0]

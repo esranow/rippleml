@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuralwave_core"
+version = "0.0.1"
+description = "A modular, research-grade PyTorch sub-framework"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "torch>=2.0.0",
+    "numpy",
+    "pyyaml",
+    "matplotlib",
+]
+
+[project.scripts]
+neuralwave-cli = "neuralwave_core.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]  # Looking for packages in current directory (where pyproject.toml is)
+include = ["neuralwave_core*"]
+namespaces = false

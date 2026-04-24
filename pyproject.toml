@@ -6,11 +6,33 @@ build-backend = "setuptools.build_meta"
 name = "ripple"
 version = "0.0.1"
 description = "ripple: modular physics-ML framework for wave PDEs"
+readme = "README.md"
 requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "RippleML Team"}
+]
 dependencies = [
     "torch>=2.0",
     "pyyaml",
+    "numpy",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "black",
+    "isort",
 ]
 
 [project.scripts]
 ripple = "ripple.cli:main"
+
+[tool.setuptools]
+packages = ["ripple", "ripple.core", "ripple.physics", "ripple.solvers", "ripple.training", "ripple.models", "ripple.physics_blocks", "ripple.operators", "ripple.io", "ripple.datasets", "ripple.diagnostics"]
+
+[tool.pytest.ini_options]
+testpaths = ["ripple/tests"]
+python_files = "test_*.py"

@@ -85,7 +85,7 @@ def train_from_config(config: Union[str, Path, Dict[str, Any]]) -> None:
     use_amp = train_cfg.get("use_amp", False) and device.type == "cuda"
     scaler = GradScaler("cuda", enabled=use_amp)
     
-    mode = cfg.get("mode", "pinn")  # pinn or operator_learning
+    mode = cfg.get("mode", cfg.get("task", "pinn")).lower()
     
     # 7. Data (Placeholder generation based on task logic)
     # In a real app, we'd use a DataModule. Here we simulate batch generation or use provided specs.
@@ -116,18 +116,23 @@ def train_from_config(config: Union[str, Path, Dict[str, Any]]) -> None:
             # Simple placeholder logic for inputs
             # Flat collocation points (M, D): x in [0,1], t in [0,1], last dim = t
             M = 256  # total collocation points
-            inputs = torch.rand(M, 2, device=device, requires_grad=True)
+            inputs = torch.rand(1, M, 2, device=device, requires_grad=True)
             
             # Forward
             with autocast("cuda", enabled=use_amp):
-                # Model output u (M, 1)
+                # Model output u (1, M, 1)
                 u_pred = model(inputs)
                 
-                # Compute Residual: u_tt - c^2*Lap(u) = 0
-                pde = PDESpec(a=1.0, c=1.0)  # wave eq; residual fn uses -c*Lap
-                res_fn = build_residual_fn(pde)
+                from ripple.physics.equation import Equation
+                from ripple.physics.operators import TimeDerivative, Laplacian
                 
-                res = res_fn(u_pred, inputs)
+                # Default wave equation: u_tt - Laplacian(u) = 0
+                eq = Equation([
+                    (1.0, TimeDerivative(order=2)),
+                    (-1.0, Laplacian())
+                ])
+                
+                res = eq.compute_residual(u_pred, inputs)
                 loss_physics = torch.mean(res ** 2)
                 
                 loss_total = loss_total + loss_physics
@@ -149,9 +154,9 @@ def train_from_config(config: Union[str, Path, Dict[str, Any]]) -> None:
                     bc_type = bc_spec.get("type", "dirichlet")
                     # Boundary points: x=0 boundary, random t
                     N_bc = 64
-                    bc_pts = torch.rand(N_bc, 2, device=device)
-                    bc_pts[:, 0] = 0.0  # x=0 boundary
-                    bc_in = bc_pts.requires_grad_(True)  # (N_bc, 2)
+                    bc_pts = torch.rand(1, N_bc, 2, device=device)
+                    bc_pts[:, :, 0] = 0.0  # x=0 boundary
+                    bc_in = bc_pts.requires_grad_(True)  # (1, N_bc, 2)
                     bc_u = model(bc_in)
                     if bc_type == "dirichlet":
                         loss_bc = torch.mean(bc_u ** 2)  # enforce u=0
@@ -165,8 +170,11 @@ def train_from_config(config: Union[str, Path, Dict[str, Any]]) -> None:
             # Targets: (B, N, C_out)
             B_size = 4
             res = cfg.get("data", {}).get("resolution", [64, 64])
-            if isinstance(res, int): N = res
-            else: N = res[0] * res[1]
+            if isinstance(res, int): 
+                N = res
+            else:
+                N = 1
+                for r in res: N *= r
             
             # Dummy data
             inputs = torch.randn(B_size, N, model_cfg.get("input_dim", 1), device=device)

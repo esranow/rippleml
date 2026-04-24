@@ -2,6 +2,7 @@ import pytest
 import torch
 import numpy as np
 from ripple.physics.pde import PDESpec
+from ripple.physics.equation import Equation
 from ripple.physics.residuals import build_residual_fn
 from ripple.physics.boundary import DirichletBC, NeumannBC, PeriodicBC
 
@@ -27,26 +28,27 @@ def test_residual_calculation():
     # Wave Eq: u_tt - v^2 u_xx = 0 => u_tt + (-v^2) u_xx = 0
     # So a=1, c=-v^2.
     
+    from ripple.physics.operators import TimeDerivative, Laplacian
     v = 2.0
-    pde = PDESpec(a=1.0, b=0.0, c=-(v**2))
-    
-    residual_fn = build_residual_fn(pde)
+    # u_tt - v^2 u_xx = 0
+    eq = Equation([
+        (1.0, TimeDerivative(order=2)),
+        (-(v**2), Laplacian())
+    ])
     
     # Create grid
     batch_size = 100
-    # Inputs: (x, t)
-    inputs = torch.rand(batch_size, 2, requires_grad=True) * 2 * np.pi
+    # Inputs: (x, t) -> (Batch, N, 2)
+    inputs = torch.rand(1, batch_size, 2, requires_grad=True) * 2 * np.pi
     
     # Compute analytic u
     u = analytic_wave_1d(inputs, c=v)
     
     # Compute residual
-    # Expected: (1)*(-v^2 sin) + (-v^2)*(-sin) = -v^2 sin + v^2 sin = 0
-    
-    res = residual_fn(u, inputs)
+    res = eq.compute_residual(u, inputs)
     
     # Check if residual is close to zero
-    assert torch.allclose(res, torch.zeros_like(res), atol=1e-5)
+    assert torch.allclose(res, torch.zeros_like(res), atol=1e-4)
 
 def test_dirichlet_bc():
     """

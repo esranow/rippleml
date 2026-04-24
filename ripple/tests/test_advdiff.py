@@ -18,20 +18,21 @@ def test_advdiff_combined():
         (-a, Diffusion(a))
     ])
     
-    domain = Domain(spatial_dims=1, x_range=(0, 1), t_range=(0, 1))
-    # Dummy initial constraint
-    ic = Constraint(fn=lambda u, x, t: torch.zeros(1), type="initial")
-    sys = System(eq, domain, [ic])
-    
     # 2. Simulation
     N = 64
+    domain = Domain(spatial_dims=1, bounds=((0, 1), (0, 1)), resolution=(N, 101))
+    # Dummy initial constraint (t=0, value=0)
+    ic = Constraint(type="initial", location=(slice(None), 0), value=0.0) 
+    sys = System(eq, domain, [ic])
+    
     u0 = torch.exp(-100 * (torch.linspace(0, 1, N) - 0.5)**2).view(1, N, 1)
     v0 = torch.zeros_like(u0) # ignored for advdiff
     
-    sim = Simulation(sys, dt=0.001, dx=1/N)
-    traj = sim.run(u0, v0, steps=10)
+    sim = Simulation(sys)
+    out = sim.run(u0, v0, steps=100)
+    traj = out["field"]
     
-    assert traj.shape == (1, 11, N, 1)
+    assert traj.shape == (1, 101, N, 1)
     assert not torch.isnan(traj).any()
     print("  [PASS] Simulation")
     
@@ -47,10 +48,11 @@ def test_advdiff_combined():
     opt = torch.optim.Adam(model.parameters(), lr=0.01)
     exp = Experiment(sys, model, opt)
     
-    x = torch.linspace(0, 1, 10).view(-1, 1)
-    t = torch.linspace(0, 1, 10).view(-1, 1)
+    # Coords: (Batch, N, 2)
+    coords = torch.rand(4, 10, 2)
     
-    loss = exp.train(x, t)
+    res = exp.train(coords)
+    loss = res["loss"]
     assert math.isfinite(loss)
     print(f"  [PASS] Experiment (loss={loss:.6f})")
 

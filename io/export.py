@@ -59,7 +59,7 @@ def write_model_card(
         "training_config": config.get("training", {}),
         "data_config": config.get("data", {}),
         "metrics": metrics,
-        "framework": "TensorWAV",
+        "framework": "ripple",
         "version": "0.0.1"
     }
     

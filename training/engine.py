@@ -1,18 +1,18 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
 import logging
 import yaml # Assuming config input might be dict or we parse inside if needed, but signature says Dict
 
-from TensorWAV.models.registry import build_model
-from TensorWAV.physics.pde import PDESpec
-from TensorWAV.physics.residuals import build_residual_fn
-from TensorWAV.physics.boundary import DirichletBC, NeumannBC, PeriodicBC
-from TensorWAV.training.callbacks import Callback, CheckpointCallback
-from TensorWAV.physics_blocks import BLOCK_REGISTRY
+from ripple.models import build_model  # triggers all @register_model decorators
+from ripple.physics.pde import PDESpec
+from ripple.physics.residuals import build_residual_fn
+from ripple.physics.boundary import DirichletBC, NeumannBC, PeriodicBC
+from ripple.training.callbacks import Callback, CheckpointCallback
+from ripple.physics_blocks import BLOCK_REGISTRY
 
 # Optimizer Registry (Simple mapping for now)
 _OPTIMIZERS = {
@@ -83,9 +83,9 @@ def train_from_config(config: Union[str, Path, Dict[str, Any]]) -> None:
     # 6. Training Loop Config
     epochs = train_cfg.get("epochs", 10)
     use_amp = train_cfg.get("use_amp", False) and device.type == "cuda"
-    scaler = GradScaler(enabled=use_amp)
+    scaler = GradScaler("cuda", enabled=use_amp)
     
-    mode = cfg.get("task", "pinn") # pinn or operator
+    mode = cfg.get("mode", "pinn")  # pinn or operator_learning
     
     # 7. Data (Placeholder generation based on task logic)
     # In a real app, we'd use a DataModule. Here we simulate batch generation or use provided specs.
@@ -107,49 +107,55 @@ def train_from_config(config: Union[str, Path, Dict[str, Any]]) -> None:
         loss_total = torch.tensor(0.0, device=device)
         
         # --- PINN MODE ---
-        if mode == "physics_informed_neural_network":
+        if mode == "pinn":
             # 1. Physics Loss (Residual)
-            # Create dummy collocation points
             # (B, N, D) -> (B, N, D+1) for time? Or just (x, t) as last dim.
             # Assume 1D+time: (B, N, 2)
             # We need domain from config
             
             # Simple placeholder logic for inputs
-            # In real PINN, this is critical.
-            # Generate random points in domain [-1, 1] x [0, 1]
-            B_size = 16
-            N_points = 100
-            inputs = torch.rand(B_size, N_points, 2, device=device, requires_grad=True)
+            # Flat collocation points (M, D): x in [0,1], t in [0,1], last dim = t
+            M = 256  # total collocation points
+            inputs = torch.rand(M, 2, device=device, requires_grad=True)
             
             # Forward
-            with autocast(enabled=use_amp):
-                # Model output u (B, N, 1) or similar
+            with autocast("cuda", enabled=use_amp):
+                # Model output u (M, 1)
                 u_pred = model(inputs)
                 
-                # Compute Residual
-                # We need PDESpec. Let's create a default one or parse.
-                # Requirement: "Loss: physics residual (optional)"
-                # We assume standard Wave equation if not specified, or parse from config (not full spec yet)
-                # Let's use a default Wave 1D for demo: u_tt - u_xx = 0
-                pde = PDESpec(a=1.0, c=-1.0) 
+                # Compute Residual: u_tt - c^2*Lap(u) = 0
+                pde = PDESpec(a=1.0, c=1.0)  # wave eq; residual fn uses -c*Lap
                 res_fn = build_residual_fn(pde)
                 
                 res = res_fn(u_pred, inputs)
                 loss_physics = torch.mean(res ** 2)
                 
-                loss_total += loss_physics
+                loss_total = loss_total + loss_physics
 
                 # Apply physics blocks
                 for blk in physics_blocks:
                     try:
                         blk_out = blk(u_pred, coords=inputs, params=None)
                         if isinstance(blk_out, tuple):
-                            # Blocks like EnergyAwareBlock return (state, penalty)
                             _, blk_loss = blk_out
                             loss_total += blk_loss
-                        # Other blocks contribute via their output (no extra loss)
                     except Exception:
-                        pass  # Skip blocks that don't match current data format
+                        pass
+
+                # Apply boundary conditions
+                # Boundary condition loss
+                bc_cfg = cfg.get("boundary_conditions", [])
+                for bc_spec in bc_cfg:
+                    bc_type = bc_spec.get("type", "dirichlet")
+                    # Boundary points: x=0 boundary, random t
+                    N_bc = 64
+                    bc_pts = torch.rand(N_bc, 2, device=device)
+                    bc_pts[:, 0] = 0.0  # x=0 boundary
+                    bc_in = bc_pts.requires_grad_(True)  # (N_bc, 2)
+                    bc_u = model(bc_in)
+                    if bc_type == "dirichlet":
+                        loss_bc = torch.mean(bc_u ** 2)  # enforce u=0
+                        loss_total = loss_total + loss_bc
                 
         # --- OPERATOR MODE ---
         elif mode == "operator_learning":
@@ -166,7 +172,7 @@ def train_from_config(config: Union[str, Path, Dict[str, Any]]) -> None:
             inputs = torch.randn(B_size, N, model_cfg.get("input_dim", 1), device=device)
             targets = torch.randn(B_size, N, model_cfg.get("output_dim", 1), device=device)
             
-            with autocast(enabled=use_amp):
+            with autocast("cuda", enabled=use_amp):
                 preds = model(inputs)
                 loss_data = nn.MSELoss()(preds, targets)
                 loss_total += loss_data

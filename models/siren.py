@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from typing import List, Dict, Any
-from TensorWAV.models.registry import register_model
+from ripple.models.registry import register_model
 
 class SineLayer(nn.Module):
     """

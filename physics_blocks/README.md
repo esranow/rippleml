@@ -6,7 +6,7 @@ A modular library of `nn.Module` blocks that combine fixed physics operators
 ## Quick Start
 
 ```python
-from TensorWAV.physics_blocks import (
+from ripple.physics_blocks import (
     HybridLaplacianBlock,
     SpectralHybridBlock,
     EnergyAwareBlock,
@@ -71,13 +71,13 @@ blocks:
 ## CLI
 
 ```bash
-python -m TensorWAV.cli --config TensorWAV/configs/demo_blocks_playground.yaml
+python -m ripple.cli --config ripple/configs/demo_blocks_playground.yaml
 ```
 
 ## Tests
 
 ```bash
-pytest TensorWAV/tests/test_physics_blocks.py -v
+pytest ripple/tests/test_physics_blocks.py -v
 ```
 
 ## Related Papers

@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from typing import Optional, Dict, Any, Callable
-from TensorWAV.operators.grid_utils import flatten_grid
+from typing import Optional, Dict, Any, Callable, Union, Tuple
+from ripple.operators.grid_utils import flatten_grid
 
 class OperatorTrainer:
     """

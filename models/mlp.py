@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from typing import List, Union, Dict, Any
-from TensorWAV.models.registry import register_model
+from ripple.models.registry import register_model
 
 @register_model("mlp")
 class MLP(nn.Module):

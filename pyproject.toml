@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ripple"
+version = "0.0.1"
+description = "ripple: modular physics-ML framework for wave PDEs"
+requires-python = ">=3.9"
+dependencies = [
+    "torch>=2.0",
+    "pyyaml",
+]
+
+[project.scripts]
+ripple = "ripple.cli:main"

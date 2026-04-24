@@ -24,10 +24,10 @@ def load_config(config_path: Path) -> Dict[str, Any]:
 
 def main() -> None:
     """
-    Main entry point for NeuralWave Core CLI.
+    Main entry point for ripple CLI.
     Parses arguments and initiates training.
     """
-    parser = argparse.ArgumentParser(description="NeuralWave Core CLI")
+    parser = argparse.ArgumentParser(description="ripple CLI")
     parser.add_argument(
         "--config",
         type=str,
@@ -46,7 +46,7 @@ def main() -> None:
     logging.info(f"Loaded configuration from {config_path}")
     
     # Import here to avoid circular imports
-    from TensorWAV.training.engine import train_from_config
+    from ripple.training.engine import train_from_config
     
     # Delegate to training engine
     train_from_config(config)

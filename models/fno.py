@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.fft
 from typing import List, Dict, Any, Tuple
-from TensorWAV.models.registry import register_model
+from ripple.models.registry import register_model
 
 class SpectralConv1d(nn.Module):
     """

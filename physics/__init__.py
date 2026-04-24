@@ -1,10 +1,10 @@
 """
-NeuralWave Core: Physics Package
+ripple: Physics Package
 Defines PDE specifications, residuals, and boundary conditions.
 """
-from TensorWAV.physics.pde import PDESpec
-from TensorWAV.physics.residuals import build_residual_fn
-from TensorWAV.physics.boundary import BoundaryCondition, DirichletBC, NeumannBC, PeriodicBC
+from ripple.physics.pde import PDESpec
+from ripple.physics.residuals import build_residual_fn
+from ripple.physics.boundary import BoundaryCondition, DirichletBC, NeumannBC, PeriodicBC
 
 __all__ = [
     "PDESpec",

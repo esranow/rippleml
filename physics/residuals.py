@@ -1,40 +1,9 @@
 import torch
 import torch.nn as nn
 from typing import Callable, Tuple, List, Optional
-from TensorWAV.physics.pde import PDESpec
+from ripple.physics.pde import PDESpec
 
-def compute_spatial_derivatives(
-    u: torch.Tensor, 
-    x: torch.Tensor, 
-    order: int
-) -> torch.Tensor:
-    """
-    Compute derivatives of u with respect to x using autograd.
-    Assumes u is (B, 1) or (B, N, 1) context. Usually inputs are (B, D).
-    
-    Args:
-        u (torch.Tensor): Output tensor, shape (B, 1).
-        x (torch.Tensor): Input tensor, shape (B, D).
-        order (int): Order of derivative.
-        
-    Returns:
-        torch.Tensor: Derivative tensor.
-    """
-    # Assuming u depends on x
-    grads = torch.autograd.grad(
-        u, x, 
-        grad_outputs=torch.ones_like(u), 
-        create_graph=True, 
-        retain_graph=True
-    )[0]
-    
-    if order == 1:
-        return grads # (B, D) vector of first derivatives
-    
-    # For higher order, we need to differentiate again
-    # But this is tricky without iterating over dimensions for mixed/laplacian
-    # Simpler approach for Laplacian: trace of Hessian or specific sum
-    return grads
+
 
 def build_residual_fn(pde: PDESpec) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]:
     """
@@ -92,14 +61,17 @@ def build_residual_fn(pde: PDESpec) -> Callable[[torch.Tensor, torch.Tensor], to
         # To get second derivatives, we differentiate the first derivatives again
         # But we need specific components.
         
-        # u_tt: differentiate u_t w.r.t inputs, take just the time component
+        # u_tt: differentiate u_t w.r.t. time input only
         grad_u_t = torch.autograd.grad(
-            u_t, inputs,
-            grad_outputs=torch.ones_like(u_t),
+            u_t.sum(), inputs,
             create_graph=True,
-            retain_graph=True
+            retain_graph=True,
+            allow_unused=True
         )[0]
-        u_tt = grad_u_t[..., -1:]
+        if grad_u_t is None:
+            u_tt = torch.zeros_like(u)
+        else:
+            u_tt = grad_u_t[..., -1:]
         
         # Laplacian(u): sum of u_xx, u_yy, etc.
         # This requires iterating over spatial dimensions if done naively via autograd
@@ -119,16 +91,19 @@ def build_residual_fn(pde: PDESpec) -> Callable[[torch.Tensor, torch.Tensor], to
                 grad_component, inputs,
                 grad_outputs=torch.ones_like(grad_component),
                 create_graph=True,
-                retain_graph=True
+                retain_graph=True,
+                allow_unused=True
             )[0]
             
-            # The i-th component of this new gradient corresponds to d(u_xi)/dxi = u_xixi
-            laplacian_val = laplacian_val + grad_grad[..., i:i+1]
+            if grad_grad is not None:
+                # The i-th component of this new gradient corresponds to d(u_xi)/dxi = u_xixi
+                laplacian_val = laplacian_val + grad_grad[..., i:i+1]
             
         # Construct terms
+        # Wave eq: u_tt - c^2 * Lap(u) = 0  →  residual = a*u_tt + b*u_t - c*Lap(u)
         term_utt = pde.a * u_tt
         term_ut = pde.b * u_t
-        term_lap = pde.c * laplacian_val
+        term_lap = -pde.c * laplacian_val
         
         # Nonlinear term f(u)
         term_nonlinear = torch.zeros_like(u)
@@ -143,7 +118,7 @@ def build_residual_fn(pde: PDESpec) -> Callable[[torch.Tensor, torch.Tensor], to
         if pde.forcing is not None:
             term_forcing = pde.forcing(inputs)
             
-        residual = term_utt + term_ut + term_lap + term_nonlinear - term_forcing
+        residual = term_utt + term_ut + term_lap + term_nonlinear - term_forcing  # = 0 at solution
         
         return residual
 

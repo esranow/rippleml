@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 from typing import List, Dict, Any, Optional
-from TensorWAV.models.registry import register_model
-from TensorWAV.models.mlp import MLP
+from ripple.models.registry import register_model
+from ripple.models.mlp import MLP
 
 @register_model("fourier_mlp")
 class FourierMLP(nn.Module):

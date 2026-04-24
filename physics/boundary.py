@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from typing import Callable, Optional, Union, Dict
+from ripple.physics.operators import Gradient
 
 class BoundaryCondition:
     """
@@ -46,22 +47,13 @@ class NeumannBC(BoundaryCondition):
             derivative_fn (Callable): Function h(x) returning target derivative values.
             normal_idx (int): dimension index along which to check derivative (simplification).
         """
+        _grad_op = Gradient()
+
         def apply(u: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
-            # check grad
-            grads = torch.autograd.grad(
-                u, x,
-                grad_outputs=torch.ones_like(u),
-                create_graph=True,
-                retain_graph=True
-            )[0]
-            
-            # Take derivative along axis normal_idx
-            # Note: This is a simplification. True Neumann requires dot(grad(u), n).
-            # For axis-aligned boundaries, this works.
-            d_u = grads[..., normal_idx:normal_idx+1]
+            d_u = _grad_op.compute(u, {"inputs": x})[..., normal_idx:normal_idx+1]
             target = derivative_fn(x)
             return torch.mean((d_u - target) ** 2)
-            
+
         super().__init__(apply)
 
 class PeriodicBC(BoundaryCondition):

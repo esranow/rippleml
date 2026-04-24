@@ -19,6 +19,6 @@ class PDESpec:
     """
     a: float = 1.0  # u_tt coefficient
     b: float = 0.0  # u_t coefficient
-    c: float = -1.0 # Laplacian(u) coefficient (Note: usually wave eq is u_tt - c^2*Laplacian(u) = 0)
+    c: float = 1.0  # Laplacian(u) coefficient. Residual form: a*u_tt + b*u_t - c*Lap(u) = 0 → wave eq: a=1,b=0,c=c²
     nonlinear_type: Optional[str] = None
     forcing: Optional[Callable[[torch.Tensor], torch.Tensor]] = None

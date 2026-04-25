@@ -1,4 +1,4 @@
-# Contributing to NeuralWave Core
+# Contributing to Ripple
 
 Thank you for your interest in contributing to NeuralWave Core!
 

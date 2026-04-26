@@ -15,12 +15,12 @@ def _fail(name, reason): print(f"  [FAIL] {name}: {reason}"); return False
 
 def _make_domain():
     from ripple.core.system import Domain
-    return Domain(spatial_dims=1, x_range=(0.0, 1.0), t_range=(0.0, 1.0))
+    return Domain(spatial_dims=1, bounds=((0.0, 1.0),), resolution=(16,))
 
 def _make_constraint(type_="initial"):
     from ripple.core.system import Constraint
     # scalar return so loss stays shape [] for .backward()
-    return Constraint(fn=lambda u, x, t: torch.tensor(0.0), weight=0.0, type=type_)
+    return Constraint(type=type_, field="u", coords=torch.zeros((1, 2)), value=0.0)
 
 def _make_wave_system():
     from ripple.physics.operators import TimeDerivative, Laplacian
@@ -163,8 +163,8 @@ def test3_simulation_consistency():
 
         system = _make_wave_system()
         u0, v0 = _u0_v0(N=16)
-        sim     = Simulation(system, c=1.0, dt=0.001, dx=1.0/16)
-        traj    = sim.run(u0, v0, steps=5)   # (1, T, 16, 1)
+        sim     = Simulation(system)
+        traj    = sim.run(u0, v0, steps=5, dt=0.001)   # (1, T, 16, 1)
 
         assert traj is not None and traj.numel() > 0
         assert not torch.isnan(traj).any(), "NaN in trajectory"
@@ -198,9 +198,9 @@ def test4_generality():
     from ripple.core.experiment import Experiment
 
     configs = [
-        ("wave",      _make_wave_system,      dict(c=1.0,  dt=0.001,  dx=1/16)),
-        ("diffusion", _make_diffusion_system, dict(c=1.0,  dt=0.0001, dx=1/16)),
-        ("advection", _make_advection_system, dict(c=0.5,  dt=0.001,  dx=1/16)),
+        ("wave",      _make_wave_system,      dict(dt=0.001)),
+        ("diffusion", _make_diffusion_system, dict(dt=0.0001)),
+        ("advection", _make_advection_system, dict(dt=0.001)),
     ]
 
     all_ok = True
@@ -209,7 +209,7 @@ def test4_generality():
         try:
             system = sys_fn()
             u0, v0 = _u0_v0(N=16)
-            traj   = Simulation(system, **sim_kw).run(u0, v0, steps=3)
+            traj   = Simulation(system).run(u0, v0, steps=3, dt=sim_kw.get("dt", 0.001))
             assert traj is not None and traj.numel() > 0 and not torch.isnan(traj).any()
             _pass(f"{name} Simulation: {tuple(traj.shape)}")
         except Exception as e:

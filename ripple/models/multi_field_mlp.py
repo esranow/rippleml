@@ -10,19 +10,18 @@ class MultiFieldMLP(nn.Module):
     hidden: Number of neurons per hidden layer in the trunk.
     layers: Number of hidden layers in the trunk.
     """
-    def __init__(self, fields: List[str] = ["u"], hidden: int = 50, layers: int = 4):
+    def __init__(self, fields: List[str] = ["u"], hidden: int = 50, layers: int = 4, in_dim: int = 2):
         super().__init__()
         self.fields = fields
         
-        # Shared trunk
+        # Shared trunk: 'layers' specifies the number of hidden layers
         trunk_layers = []
-        in_dim = 2 # (x, t) or (x, y) - default to 2
         for i in range(layers):
             trunk_layers.append(nn.Linear(in_dim if i == 0 else hidden, hidden))
             trunk_layers.append(nn.Tanh())
         self.trunk = nn.Sequential(*trunk_layers)
         
-        # Multiple heads
+        # Multiple heads: one linear output head per field
         self.heads = nn.ModuleDict({
             field: nn.Linear(hidden, 1) for field in fields
         })

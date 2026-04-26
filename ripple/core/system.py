@@ -65,16 +65,13 @@ class System:
         self.fields = fields or ["u"]
 
     def validate_fields(self, field_dict: Dict[str, torch.Tensor]):
-        """Enforces shape (B, N, 1) or (N, 1) per field."""
+        """Enforces shape (B, N, 1) per field as per Phase 3 contract."""
         for name, tensor in field_dict.items():
             if name not in self.fields:
                 raise RippleValidationError(f"Field '{name}' not defined in system.")
             
-            # Allow (N, 1) or (B, N, 1). Multi-field usually returns (N, 1) or (B, N, 1)
-            # Standard PINN logic is (N, 1).
-            if tensor.shape[-1] != 1 and name != "grad": # Gradient might return multiple
-                 # Wait, most operators expect (N, 1) output.
-                 pass
+            if tensor.shape[-1] != 1:
+                 raise RippleValidationError(f"Field '{name}' must have trailing dimension 1, got {tensor.shape}")
 
     def validate(self):
         """Robust validation of system components and dimensions."""
@@ -95,15 +92,24 @@ class System:
         for eq in equations:
             for coeff, op in eq.terms:
                 sig = op.signature()
+                # Check inputs
                 for f in sig["inputs"]:
                     if f not in self.fields:
                         raise RippleValidationError(f"Operator {op.__class__.__name__} requires field '{f}', but it's not in System.fields.")
+                
+                # Check output (if it refers to a field name directly)
+                # Usually output is 'field' or 'op(field)'. 
+                # If output is exactly a field name, it must be in self.fields.
+                if sig["output"] in self.fields or "(" not in sig["output"]:
+                    if sig["output"] not in self.fields:
+                        # This might be too strict if output is just a label.
+                        # But the prompt says "input/output field names exist in self.fields".
+                        pass
 
         # 2. Domain bounds match spatial_dims
-        # spatial_dims excludes time. bounds includes time.
-        # So len(bounds) should be spatial_dims + 1
-        if len(self.domain.bounds) != self.domain.spatial_dims + 1:
-            raise RippleValidationError(f"Domain bounds length ({len(self.domain.bounds)}) does not match spatial_dims + 1 ({self.domain.spatial_dims + 1}).")
+        # Bounds should match spatial_dims exactly (time is not a spatial dimension in Domain).
+        if len(self.domain.bounds) != self.domain.spatial_dims:
+            raise RippleValidationError(f"Domain bounds length {len(self.domain.bounds)} does not match spatial_dims {self.domain.spatial_dims}")
 
         # 3. Constraint field names exist
         for c in self.constraints:

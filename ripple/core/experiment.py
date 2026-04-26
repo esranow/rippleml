@@ -40,7 +40,12 @@ class Experiment:
                 fields_c = u_pred_all if isinstance(u_pred_all, dict) else {"u": u_pred_all}
                 u_pred = fields_c[c.field]
                 
-                u_target = c.value(c_coords) if callable(c.value) else c.value.to(coords.device)
+                u_target = c.value(c_coords) if callable(c.value) else c.value
+                if isinstance(u_target, (float, int)):
+                    u_target = torch.full_like(u_pred, u_target)
+                else:
+                    u_target = u_target.to(coords.device)
+                    
                 loss_const = loss_const + F.mse_loss(u_pred, u_target)
             
             # Phase 2 introduced weighted loss (100x default)

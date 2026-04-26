@@ -20,16 +20,17 @@ def test_advdiff_combined():
     
     # 2. Simulation
     N = 64
-    domain = Domain(spatial_dims=1, bounds=((0, 1), (0, 1)), resolution=(N, 101))
-    # Dummy initial constraint (t=0, value=0)
-    ic = Constraint(type="initial", location=(slice(None), 0), value=0.0) 
+    dt = 0.01
+    domain = Domain(spatial_dims=1, bounds=((0, 1),), resolution=(N,))
+    # Dummy initial constraint (field, coords, value)
+    ic = Constraint(type="initial", field="u", coords=torch.zeros((1, 2)), value=0.0) 
     sys = System(eq, domain, [ic])
     
     u0 = torch.exp(-100 * (torch.linspace(0, 1, N) - 0.5)**2).view(1, N, 1)
     v0 = torch.zeros_like(u0) # ignored for advdiff
     
     sim = Simulation(sys)
-    out = sim.run(u0, v0, steps=100)
+    out = sim.run(u0, v0, steps=100, dt=dt)
     traj = out["field"]
     
     assert traj.shape == (1, 101, N, 1)

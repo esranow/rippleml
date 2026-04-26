@@ -25,7 +25,7 @@ class Operator:
         """Returns metadata about the operator."""
         return {
             "inputs": [self.field],
-            "output": f"{self.__class__.__name__.lower()}({self.field})",
+            "output": self.field,
             "order": 0,
             "type": "generic"
         }
@@ -64,7 +64,11 @@ class Laplacian(Operator):
 
     def signature(self) -> Dict[str, Any]:
         sig = super().signature()
-        sig.update({"order": 2, "type": "spatial"})
+        sig.update({
+            "output": f"laplacian({self.field})",
+            "order": 2, 
+            "type": "spatial"
+        })
         return sig
 
 
@@ -82,7 +86,11 @@ class Gradient(Operator):
 
     def signature(self) -> Dict[str, Any]:
         sig = super().signature()
-        sig.update({"order": 1, "type": "spatial"})
+        sig.update({
+            "output": f"grad({self.field})",
+            "order": 1, 
+            "type": "spatial"
+        })
         return sig
 
 
@@ -108,7 +116,11 @@ class Divergence(Operator):
 
     def signature(self) -> Dict[str, Any]:
         sig = super().signature()
-        sig.update({"order": 1, "type": "spatial"})
+        sig.update({
+            "output": f"div({self.field})",
+            "order": 1, 
+            "type": "spatial"
+        })
         return sig
 
 
@@ -133,7 +145,11 @@ class TimeDerivative(Operator):
 
     def signature(self) -> Dict[str, Any]:
         sig = super().signature()
-        sig.update({"order": self.order, "type": "temporal"})
+        sig.update({
+            "output": f"dt^{self.order}({self.field})",
+            "order": self.order,
+            "type": "temporal"
+        })
         return sig
 
 
@@ -148,7 +164,11 @@ class Diffusion(Operator):
 
     def signature(self) -> Dict[str, Any]:
         sig = super().signature()
-        sig.update({"order": 2, "type": "spatial"})
+        sig.update({
+            "output": f"diffusion({self.field})",
+            "order": 2, 
+            "type": "spatial"
+        })
         return sig
 
 class Advection(Operator):
@@ -164,7 +184,11 @@ class Advection(Operator):
 
     def signature(self) -> Dict[str, Any]:
         sig = super().signature()
-        sig.update({"order": 1, "type": "spatial"})
+        sig.update({
+            "output": f"advection({self.field})",
+            "order": 1, 
+            "type": "spatial"
+        })
         return sig
 
 class Source(Operator):
@@ -178,7 +202,11 @@ class Source(Operator):
 
     def signature(self) -> Dict[str, Any]:
         sig = super().signature()
-        sig.update({"order": 0, "type": "source"})
+        sig.update({
+            "output": f"source({self.field})",
+            "order": 0, 
+            "type": "source"
+        })
         return sig
 
 class Nonlinear(Operator):
@@ -192,5 +220,9 @@ class Nonlinear(Operator):
 
     def signature(self) -> Dict[str, Any]:
         sig = super().signature()
-        sig.update({"order": 0, "type": "nonlinear"})
+        sig.update({
+            "output": f"nonlinear({self.field})",
+            "order": 0, 
+            "type": "nonlinear"
+        })
         return sig

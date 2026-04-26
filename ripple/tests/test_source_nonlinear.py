@@ -8,8 +8,8 @@ from ripple.core.experiment import Experiment
 def test_source_nonlinear():
     print("RUNNING SOURCE + NONLINEAR TEST")
     
-    domain = Domain(spatial_dims=1, bounds=((0, 1), (0, 1)), resolution=(32, 101))
-    ic = Constraint(type="initial", location=(slice(None), 0), value=0.0)
+    domain = Domain(spatial_dims=1, bounds=((0, 1),), resolution=(32,))
+    ic = Constraint(type="initial", field="u", coords=torch.zeros((1, 2)), value=0.0)
     
     # 1. Source Test: u_t = a*u_xx + f(x,t)
     f = lambda u, p: torch.sin(math.pi * p["inputs"][..., 0:1])

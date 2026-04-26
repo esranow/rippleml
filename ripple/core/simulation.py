@@ -35,11 +35,13 @@ class Simulation:
         u0: torch.Tensor,
         v0: torch.Tensor,
         steps: int = 10,
+        dt: float = 0.01,
     ) -> dict:
         self.system.set_seed(self.seed)
         self.system.validate()
         
-        coords, (dx, dt) = self.system.domain.build_grid(device=u0.device)
+        coords, spacings = self.system.domain.build_grid(device=u0.device)
+        dx = spacings[0]
         from ripple.core.solver_registry import get_solver
         solver_fn, extractor = get_solver(self.system.equation)
         extra_kwargs = extractor(self.system.equation)
@@ -161,8 +163,9 @@ def run_system(system: System, mode: str = "sim", **kwargs):
         if v0 is None and u0 is not None:
             v0 = torch.zeros_like(u0)
         steps = kwargs.pop("steps", 10)
+        dt = kwargs.pop("dt", 0.01)
         tol = kwargs.pop("tol", 1e-2)
-        return Simulation(system, tol=tol, **kwargs).run(u0, v0, steps=steps)
+        return Simulation(system, tol=tol, **kwargs).run(u0, v0, steps=steps, dt=dt)
     elif mode == "exp":
         from ripple.core.experiment import Experiment
         model = kwargs.pop("model", None)

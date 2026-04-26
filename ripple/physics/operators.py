@@ -4,14 +4,31 @@ Reuses autograd patterns from ripple.physics.residuals.
 """
 from __future__ import annotations
 import torch
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 
 class Operator:
     """Abstract base: compute(field, params) -> tensor."""
 
+    def __init__(self, field: str = "u"):
+        self.field = field
+
+    def _get_field(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor:
+        if "fields" in params and self.field in params["fields"]:
+            return params["fields"][self.field]
+        return field
+
     def compute(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor:
         raise NotImplementedError
+
+    def signature(self) -> Dict[str, Any]:
+        """Returns metadata about the operator."""
+        return {
+            "inputs": [self.field],
+            "output": f"{self.__class__.__name__.lower()}({self.field})",
+            "order": 0,
+            "type": "generic"
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -19,24 +36,19 @@ class Operator:
 # ---------------------------------------------------------------------------
 
 class Laplacian(Operator):
-    """
-    Autograd Laplacian: sum of d²u/dx_i² over spatial dims.
-    inputs convention: (..., D) where last dim = time → spatial dims = [:-1].
-    """
-
     def compute(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor:
-        inputs: torch.Tensor = params["inputs"]  # requires_grad=True
-        spatial_dim = inputs.shape[-1] - 1  # exclude time
+        u = self._get_field(field, params)
+        inputs: torch.Tensor = params["inputs"]
+        spatial_dim = inputs.shape[-1] - 1
 
-        # First-order spatial grads
         grads = torch.autograd.grad(
-            field, inputs,
-            grad_outputs=torch.ones_like(field),
+            u, inputs,
+            grad_outputs=torch.ones_like(u),
             create_graph=True,
             retain_graph=True,
-        )[0]  # (..., D)
+        )[0]
 
-        laplacian = torch.zeros_like(field)
+        laplacian = torch.zeros_like(u)
         for i in range(spatial_dim):
             gi = grads[..., i : i + 1]
             ggi = torch.autograd.grad(
@@ -50,34 +62,64 @@ class Laplacian(Operator):
                 laplacian = laplacian + ggi[..., i : i + 1]
         return laplacian
 
+    def signature(self) -> Dict[str, Any]:
+        sig = super().signature()
+        sig.update({"order": 2, "type": "spatial"})
+        return sig
+
 
 class Gradient(Operator):
-    """Full gradient ∂u/∂x_i for each spatial dim."""
-
     def compute(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor:
+        u = self._get_field(field, params)
         inputs: torch.Tensor = params["inputs"]
         grads = torch.autograd.grad(
-            field, inputs,
-            grad_outputs=torch.ones_like(field),
+            u, inputs,
+            grad_outputs=torch.ones_like(u),
             create_graph=True,
             retain_graph=True,
         )[0]
-        return grads[..., :-1]  # spatial only
+        return grads[..., :-1]
+
+    def signature(self) -> Dict[str, Any]:
+        sig = super().signature()
+        sig.update({"order": 1, "type": "spatial"})
+        return sig
+
+
+class Divergence(Operator):
+    def compute(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor:
+        u = self._get_field(field, params)
+        inputs: torch.Tensor = params["inputs"]
+        spatial_dim = inputs.shape[-1] - 1
+        
+        div = torch.zeros(u.shape[:-1] + (1,), device=u.device)
+        for i in range(spatial_dim):
+            vi = u[..., i:i+1]
+            gi = torch.autograd.grad(
+                vi, inputs,
+                grad_outputs=torch.ones_like(vi),
+                create_graph=True,
+                retain_graph=True,
+                allow_unused=True
+            )[0]
+            if gi is not None:
+                div = div + gi[..., i:i+1]
+        return div
+
+    def signature(self) -> Dict[str, Any]:
+        sig = super().signature()
+        sig.update({"order": 1, "type": "spatial"})
+        return sig
 
 
 class TimeDerivative(Operator):
-    """
-    nth-order time derivative.  order=1 → u_t, order=2 → u_tt.
-    inputs: (..., D), last dim is time.
-    """
-
-    def __init__(self, order: int = 1):
-        assert order in (1, 2), "Only order 1 or 2 supported."
+    def __init__(self, order: int = 1, field: str = "u"):
+        super().__init__(field=field)
         self.order = order
 
     def compute(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor:
+        u = self._get_field(field, params)
         inputs: torch.Tensor = params["inputs"]
-        u = field
 
         for _ in range(self.order):
             g = torch.autograd.grad(
@@ -86,43 +128,69 @@ class TimeDerivative(Operator):
                 retain_graph=True,
                 allow_unused=True,
             )[0]
-            u = g[..., -1:] if g is not None else torch.zeros_like(field)
+            u = g[..., -1:] if g is not None else torch.zeros_like(u)
         return u
+
+    def signature(self) -> Dict[str, Any]:
+        sig = super().signature()
+        sig.update({"order": self.order, "type": "temporal"})
+        return sig
 
 
 class Diffusion(Operator):
-    """Diffusion operator: alpha * Laplacian(u)"""
-    def __init__(self, alpha: float):
+    def __init__(self, alpha: float, field: str = "u"):
+        super().__init__(field=field)
         self.alpha = alpha
-        self.laplacian = Laplacian()
+        self.laplacian = Laplacian(field=field)
 
     def compute(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor:
         return self.alpha * self.laplacian.compute(field, params)
 
+    def signature(self) -> Dict[str, Any]:
+        sig = super().signature()
+        sig.update({"order": 2, "type": "spatial"})
+        return sig
+
 class Advection(Operator):
-    """Advection operator: v * Gradient(u)"""
-    def __init__(self, v: float):
+    def __init__(self, v: float, field: str = "u"):
+        super().__init__(field=field)
         self.v = v
-        self.gradient = Gradient()
+        self.gradient = Gradient(field=field)
 
     def compute(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor:
-        grad = self.gradient.compute(field, params)
-        # assuming 1D for v
+        u = self._get_field(field, params)
+        grad = self.gradient.compute(u, params)
         return self.v * grad[..., 0:1]
 
+    def signature(self) -> Dict[str, Any]:
+        sig = super().signature()
+        sig.update({"order": 1, "type": "spatial"})
+        return sig
+
 class Source(Operator):
-    """Source term: fn(field, params)"""
-    def __init__(self, fn):
+    def __init__(self, fn, field: str = "u"):
+        super().__init__(field=field)
         self.fn = fn
 
     def compute(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor:
-        return self.fn(field, params)
+        u = self._get_field(field, params)
+        return self.fn(u, params)
+
+    def signature(self) -> Dict[str, Any]:
+        sig = super().signature()
+        sig.update({"order": 0, "type": "source"})
+        return sig
 
 class Nonlinear(Operator):
-    """Nonlinear operator: fn(field)"""
-    def __init__(self, fn):
+    def __init__(self, fn, field: str = "u"):
+        super().__init__(field=field)
         self.fn = fn
 
     def compute(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor:
-        return self.fn(field, params)
+        u = self._get_field(field, params)
+        return self.fn(u, params)
 
+    def signature(self) -> Dict[str, Any]:
+        sig = super().signature()
+        sig.update({"order": 0, "type": "nonlinear"})
+        return sig

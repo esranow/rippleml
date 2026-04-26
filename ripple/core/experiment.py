@@ -1,5 +1,6 @@
 import torch
 from ripple.core.system import System
+from ripple.core.equation_system import EquationSystem
 
 class Experiment:
     def __init__(self, system: System, model, opt):
@@ -12,22 +13,37 @@ class Experiment:
         for _ in range(epochs):
             self.opt.zero_grad()
             
-            # 1. Physics Residual
+            # 1. Forward pass & Wrapping
             coords.requires_grad_(True)
-            u = self.model(coords)
-            pde_res = self.system.equation.compute_residual(u, coords)
-            loss_pde = (pde_res**2).mean()
+            u_out = self.model(coords)
             
-            # 2. Constraint Loss
-            loss_const = 0.0
-            device = coords.device
+            # Auto-wrap if single tensor
+            fields = u_out if isinstance(u_out, dict) else {"u": u_out}
+            
+            # 2. Physics Loss
+            if isinstance(self.system.equation, EquationSystem):
+                loss_pde = self.system.equation.compute_loss(fields, coords)
+            else:
+                # Fallback to single field logic
+                # Extract 'u' field for legacy Equation.compute_residual
+                pde_res = self.system.equation.compute_residual(fields["u"], coords)
+                loss_pde = (pde_res**2).mean()
+            
+            # 3. Constraint Loss
+            loss_const = torch.tensor(0.0, device=coords.device)
             import torch.nn.functional as F
             for c in self.system.constraints:
-                c_coords = c.coords.to(device)
-                u_pred = self.model(c_coords)
-                u_target = c.value(c_coords) if callable(c.value) else c.value.to(device)
-                loss_const += F.mse_loss(u_pred, u_target)
+                c_coords = c.coords.to(coords.device)
+                u_pred_all = self.model(c_coords)
+                
+                # Extract specific field for constraint
+                fields_c = u_pred_all if isinstance(u_pred_all, dict) else {"u": u_pred_all}
+                u_pred = fields_c[c.field]
+                
+                u_target = c.value(c_coords) if callable(c.value) else c.value.to(coords.device)
+                loss_const = loss_const + F.mse_loss(u_pred, u_target)
             
+            # Phase 2 introduced weighted loss (100x default)
             total_loss = loss_pde + 100.0 * loss_const
             
             if torch.isnan(total_loss):

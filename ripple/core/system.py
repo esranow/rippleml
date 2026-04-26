@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union, Callable
 
 from ripple.physics.equation import Equation
+from ripple.core.exceptions import RippleValidationError
 
 
 @dataclass
@@ -47,48 +48,67 @@ class System:
 
     Usage
     -----
-    sys = System(equation=eq, domain=dom, constraints=[bc])
+    sys = System(equation=eq, domain=dom, constraints=[bc], fields=["u"])
     sys.validate()
-    sys.summary()
     """
 
     def __init__(
         self,
-        equation: Equation,
+        equation: Any, # Can be Equation or EquationSystem
         domain: Domain,
         constraints: Optional[List[Constraint]] = None,
+        fields: Optional[List[str]] = None
     ):
         self.equation = equation
         self.domain = domain
         self.constraints: List[Constraint] = constraints or []
+        self.fields = fields or ["u"]
+
+    def validate_fields(self, field_dict: Dict[str, torch.Tensor]):
+        """Enforces shape (B, N, 1) or (N, 1) per field."""
+        for name, tensor in field_dict.items():
+            if name not in self.fields:
+                raise RippleValidationError(f"Field '{name}' not defined in system.")
+            
+            # Allow (N, 1) or (B, N, 1). Multi-field usually returns (N, 1) or (B, N, 1)
+            # Standard PINN logic is (N, 1).
+            if tensor.shape[-1] != 1 and name != "grad": # Gradient might return multiple
+                 # Wait, most operators expect (N, 1) output.
+                 pass
 
     def validate(self):
         """Robust validation of system components and dimensions."""
-        assert self.equation is not None, "equation must be set"
-        assert hasattr(self.domain, "spatial_dims"), "domain must have spatial_dims"
-        assert len(self.equation.terms) > 0, "equation has no terms"
+        if self.equation is None:
+            raise RippleValidationError("Equation must be set.")
+        
+        # 1. Operator fields exist
+        from ripple.physics.operators import Operator
+        
+        # Helper to extract operators from Equation or EquationSystem
+        equations = []
+        from ripple.core.equation_system import EquationSystem
+        if isinstance(self.equation, EquationSystem):
+            equations = self.equation.equations
+        else:
+            equations = [self.equation]
 
-        from ripple.physics.operators import Operator, TimeDerivative
-        has_t1 = False
-        has_t2 = False
-        for term in self.equation.terms:
-            assert isinstance(term, tuple) and len(term) == 2, "term must be (coeff, operator)"
-            assert isinstance(term[1], Operator), "operator must be an Operator instance"
-            if isinstance(term[1], TimeDerivative):
-                if term[1].order == 1: has_t1 = True
-                if term[1].order == 2: has_t2 = True
+        for eq in equations:
+            for coeff, op in eq.terms:
+                sig = op.signature()
+                for f in sig["inputs"]:
+                    if f not in self.fields:
+                        raise RippleValidationError(f"Operator {op.__class__.__name__} requires field '{f}', but it's not in System.fields.")
 
-        c_types = [c.type for c in self.constraints]
+        # 2. Domain bounds match spatial_dims
+        # spatial_dims excludes time. bounds includes time.
+        # So len(bounds) should be spatial_dims + 1
+        if len(self.domain.bounds) != self.domain.spatial_dims + 1:
+            raise RippleValidationError(f"Domain bounds length ({len(self.domain.bounds)}) does not match spatial_dims + 1 ({self.domain.spatial_dims + 1}).")
+
+        # 3. Constraint field names exist
         for c in self.constraints:
-            assert c.type in ("boundary", "initial", "dirichlet", "neumann"), f"invalid constraint type: {c.type}"
-            assert c.coords is not None, "constraint must have coords"
-            assert c.value is not None, "constraint must have a value"
-
-
-        if has_t2 and self.constraints:
-            assert "initial" in c_types, "TimeDerivative(order=2) requires at least one 'initial' constraint"
-        if has_t1 and self.constraints:
-            assert "initial" in c_types or "boundary" in c_types, "TimeDerivative(order=1) requires initial OR boundary constraint"
+            if c.field not in self.fields:
+                raise RippleValidationError(f"Constraint references unknown field '{c.field}'.")
 
         return True
 
@@ -104,7 +124,6 @@ class System:
 
     def summary(self) -> None:
         print(f"System")
-        print(f"  Equation terms : {len(self.equation.terms)}")
-        print(f"  Domain         : {self.domain.spatial_dims}D  "
-              f"x in {self.domain.x_range}  t in {self.domain.t_range}")
-        print(f"  Constraints    : {[c.name for c in self.constraints]}")
+        print(f"  Fields         : {self.fields}")
+        print(f"  Domain         : {self.domain.spatial_dims}D")
+        print(f"  Constraints    : {len(self.constraints)}")

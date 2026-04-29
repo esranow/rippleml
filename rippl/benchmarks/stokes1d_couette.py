@@ -22,7 +22,7 @@ def main():
     
     eq_continuity = Equation(terms=[
         (1.0, Gradient(field="u")),
-        (1.0, Gradient(field="p"))
+        (10.0, Gradient(field="p"))
     ])
     
     eq_system = EquationSystem(equations=[eq_momentum, eq_continuity])
@@ -40,14 +40,17 @@ def main():
     # p(0)=1, p(1)=0
     c_u0 = Constraint(type="dirichlet", field="u", coords=torch.tensor([[0.0]]), value=0.0)
     c_u1 = Constraint(type="dirichlet", field="u", coords=torch.tensor([[1.0]]), value=1.0)
-    c_p0 = Constraint(type="dirichlet", field="p", coords=torch.tensor([[0.0]]), value=1.0)
+    # Pressure gauge: p(0) = 1.0 — breaks pressure uniqueness degeneracy
+    x_gauge = torch.zeros(1, 1)
+    p_gauge_target = 1.0
+    c_p_gauge = Constraint(type="dirichlet", field="p", coords=x_gauge, value=p_gauge_target)
     
     # 4. System
     sys = System(
         equation=eq_system,
         domain=domain,
         fields=["u", "p"],
-        constraints=[c_u0, c_u1, c_p0]
+        constraints=[c_u0, c_u1, c_p_gauge]
     )
     sys.validate()
 

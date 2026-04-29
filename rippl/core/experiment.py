@@ -185,21 +185,23 @@ class Experiment(CausalTrainingMixin):
                 break
 
         # L-BFGS Exploitation Phase
-        print("[L-BFGS] Starting exploitation phase...")
-        lbfgs_opt = torch.optim.LBFGS(self.model.parameters(), lr=1.0, max_iter=20, line_search_fn="strong_wolfe")
-        
-        def closure():
-            lbfgs_opt.zero_grad()
-            l_dict, l_cons = _get_losses(coords)
-            # Apply FROZEN ntk_weights
-            total = sum(ntk_weights[k] * v for k, v in l_dict.items()) + 10.0 * l_cons
-            if total.requires_grad:
-                total.backward()
-            return total
+        if hasattr(self.model, "parameters") and list(self.model.parameters()):
+            print("[L-BFGS] Starting exploitation phase...")
+            lbfgs_opt = torch.optim.LBFGS(self.model.parameters(), lr=1.0, max_iter=20, line_search_fn="strong_wolfe")
+            
+            def closure():
+                lbfgs_opt.zero_grad()
+                l_dict, l_cons = _get_losses(coords)
+                # Apply FROZEN ntk_weights
+                total = sum(ntk_weights[k] * v for k, v in l_dict.items()) + 10.0 * l_cons
+                if total.requires_grad:
+                    total.backward()
+                return total
 
-        # Run L-BFGS for a fixed number of steps
-        for step in range(100):
-            lbfgs_opt.step(closure)
+            # Run L-BFGS for a fixed number of steps
+            for step in range(100):
+                lbfgs_opt.step(closure)
+        # else: L-BFGS skipped for functional models
 
         if self.validate_after_train:
             from rippl.diagnostics.physics_validator import PhysicsValidator

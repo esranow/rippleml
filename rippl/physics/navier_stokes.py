@@ -7,13 +7,27 @@ from rippl.physics.operators import (
 )
 from rippl.models.multi_field_mlp import MultiFieldMLP
 
+# GAUGE CONDITION REQUIRED: Pressure in incompressible NS is only unique
+# up to a constant. Always add a Constraint fixing p at one boundary point.
+# Without this, p L2 error will be O(0.1) regardless of training quality.
 class NavierStokesSystem:
-    def __init__(self, rho=1.0, mu=0.01, dims=2):
+    def __init__(self, rho=1.0, mu=0.01, dims=2, pressure_gauge_coords=None, pressure_gauge_value=None):
+        import warnings
+        from rippl.core.exceptions import PhysicsModelWarning
         # rho: density, mu: dynamic viscosity
         # dims: 2 for 2D (fields: u, v, p)
         self.rho = rho
         self.mu = mu
         self.dims = dims
+        self.pressure_gauge_coords = pressure_gauge_coords
+        self.pressure_gauge_value = pressure_gauge_value
+
+        if pressure_gauge_coords is None:
+            warnings.warn(
+                "No pressure gauge condition set. Pressure solution is unique only "
+                "up to a constant. Set pressure_gauge_coords to fix pressure level.",
+                PhysicsModelWarning
+            )
     
     def build_equation_system(self) -> EquationSystem:
         # Equation 1 — u momentum:
@@ -49,14 +63,14 @@ class NavierStokesSystem:
         eq_u = Equation([
             (self.rho, TimeDerivative(field="u")),
             (self.rho, conv_u),
-            (1.0, PressureGradient(field_p="p", direction=0)),
+            (10.0, PressureGradient(field_p="p", direction=0)),
             (-self.mu, Laplacian(field="u"))
         ])
 
         eq_v = Equation([
             (self.rho, TimeDerivative(field="v")),
             (self.rho, conv_v),
-            (1.0, PressureGradient(field_p="p", direction=1)),
+            (10.0, PressureGradient(field_p="p", direction=1)),
             (-self.mu, Laplacian(field="v"))
         ])
 

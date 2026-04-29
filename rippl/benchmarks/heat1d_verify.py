@@ -89,9 +89,11 @@ def main():
             print(f"Epoch {epoch}: res={res.item():.2e} ic={ic.item():.2e} bc={bc.item():.2e}")
 
     # 5. LBFGS
-    print("LBFGS training (200 steps)...")
-    opt_l = torch.optim.LBFGS(model.parameters(), lr=1.0, max_iter=20, line_search_fn="strong_wolfe")
-    for step in range(200):
+    from rippl.training.lbfgs_config import LBFGSConfig
+    print("LBFGS training (1000 steps)...")
+    # TIGHT config closes DeepXDE accuracy gap (target L2 < 1.79e-04)
+    opt_l = torch.optim.LBFGS(model.parameters(), **LBFGSConfig.TIGHT)
+    for step in range(1000):
         def closure():
             opt_l.zero_grad()
             l, _, _, _ = compute_loss()

@@ -65,7 +65,7 @@ class Experiment(CausalTrainingMixin):
         model.zero_grad() # Clear immediately
         return torch.sqrt(grad_norm_sq).item()
 
-    def train(self, coords: torch.Tensor, epochs: int = 1, ntk_freq: int = 500, patience: int = 200) -> Dict[str, Any]:
+    def train(self, coords: torch.Tensor, epochs: int = 1, ntk_freq: int = 500, patience: int = 200, logger: Any = None, params: Dict[str, torch.Tensor] = None) -> Dict[str, Any]:
         """Run the training loop with Lazy NTK weighting and dynamic L-BFGS handoff."""
         best_loss = float('inf')
         patience_counter = 0
@@ -78,7 +78,7 @@ class Experiment(CausalTrainingMixin):
             """Core loss computation closure."""
             # 1. Forward pass
             u_out = self.model(current_coords)
-            fields = u_out if isinstance(u_out, dict) else {"u": u_out}
+            fields = u_out if isinstance(u_out, dict) else {self.system.fields[0]: u_out}
             
             # 2. Physics Loss
             spatial_dims = self.system.domain.spatial_dims
@@ -94,7 +94,7 @@ class Experiment(CausalTrainingMixin):
                 else:
                     loss_pde = self.system.equation.compute_loss(fields, current_coords, spatial_dims=spatial_dims)
             else:
-                pde_res = self.system.equation.compute_residual(fields["u"], current_coords, spatial_dims=spatial_dims)
+                pde_res = self.system.equation.compute_residual(fields[self.system.fields[0]], current_coords, spatial_dims=spatial_dims)
                 if self.causal_training:
                     w = self.compute_causal_weights_binned(current_coords, pde_res, n_bins=self.causal_bins, epsilon=self.causal_epsilon) if self.causal_mode == "binned" else \
                         self.compute_causal_weights_continuous(current_coords, pde_res, epsilon=self.causal_epsilon)
@@ -142,9 +142,15 @@ class Experiment(CausalTrainingMixin):
         for epoch in range(epochs):
             self.opt.zero_grad()
             
+            # Dynamic updates: Collocation + Moving Boundaries
             if self.adaptive_collocation:
                 self.sampler.update(self.model, self.system.equation, epoch)
                 coords = self.sampler.current_points().requires_grad_(True)
+            
+            # Feature: Moving Boundary Update (Adam only)
+            for c in self.system.constraints:
+                if hasattr(c, "update"):
+                    c.update(epoch, self.model)
             
             loss_dict, loss_cons = _get_losses(coords)
             
@@ -171,6 +177,11 @@ class Experiment(CausalTrainingMixin):
             # Adam step
             total_loss.backward()
             self.opt.step()
+
+            if logger:
+                l_vals = {k: v.item() for k, v in loss_dict.items()}
+                l_vals["total"] = total_loss.item()
+                logger.log_epoch(epoch, l_vals, params=params)
 
             # Plateau Detection (Handoff trigger)
             current_loss_val = total_loss.item()

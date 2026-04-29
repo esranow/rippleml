@@ -6,7 +6,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 from typing import Any, Dict, List, Optional
-
+from rippl.core.config import register_operator
 
 class Operator:
     """Abstract base: forward(fields, coords, derived) -> tensor."""
@@ -50,6 +50,7 @@ class Operator:
 # Linear Operators (Updated to new contract)
 # ---------------------------------------------------------------------------
 
+@register_operator("laplacian")
 class Laplacian(Operator):
     def __init__(self, field="u", spatial_dims=None):
         # spatial_dims: explicit int — number of spatial dims
@@ -88,6 +89,7 @@ class Laplacian(Operator):
         return result
 
 
+@register_operator("gradient")
 class Gradient(Operator):
     def __init__(self, field="u", spatial_dims=None):
         super().__init__(field=field)
@@ -118,6 +120,7 @@ class Gradient(Operator):
         return torch.cat(grads, dim=-1)
 
 
+@register_operator("divergence")
 class Divergence(Operator):
     def signature(self) -> Dict[str, Any]:
         return {
@@ -152,6 +155,7 @@ class Divergence(Operator):
         return div
 
 
+@register_operator("timederivative")
 class TimeDerivative(Operator):
     def __init__(self, order: int = 1, field: str = "u"):
         super().__init__(field=field)
@@ -180,6 +184,7 @@ class TimeDerivative(Operator):
         return u
 
 
+@register_operator("diffusion")
 class Diffusion(Operator):
     def __init__(self, alpha: float, field: str = "u"):
         super().__init__(field=field)
@@ -200,6 +205,7 @@ class Diffusion(Operator):
         return self.alpha * self.laplacian.forward(fields, coords, derived)
 
 
+@register_operator("advection")
 class Advection(Operator):
     def __init__(self, v: float, field: str = "u"):
         super().__init__(field=field)
@@ -221,6 +227,7 @@ class Advection(Operator):
         return self.v * grad[..., 0:1]
 
 
+@register_operator("source")
 class Source(Operator):
     def __init__(self, fn, field: str = "u"):
         super().__init__(field=field)
@@ -241,6 +248,7 @@ class Source(Operator):
         return self.fn(u, params)
 
 
+@register_operator("nonlinear")
 class Nonlinear(Operator):
     def __init__(self, fn, field: str = "u"):
         super().__init__(field=field)
@@ -265,6 +273,7 @@ class Nonlinear(Operator):
 # Part B: Nonlinear Operators
 # ---------------------------------------------------------------------------
 
+@register_operator("burgers_advection")
 class BurgersAdvection(Operator):
     # u * ∂u/∂x — requires u_x precomputed
     def __init__(self, field="u", spatial_dim=0):
@@ -287,6 +296,7 @@ class BurgersAdvection(Operator):
         return u * u_deriv
 
 
+@register_operator("nonlinear_advection")
 class NonlinearAdvection(Operator):
     # (u·∇)u — for vector fields, u advects itself
     # used in Navier-Stokes momentum
@@ -320,6 +330,7 @@ class NonlinearAdvection(Operator):
         return torch.cat([conv_u, conv_v], dim=-1)
 
 
+@register_operator("pressure_gradient")
 class PressureGradient(Operator):
     # ∂p/∂x or ∂p/∂y
     def __init__(self, field_p="p", direction=0):
@@ -341,6 +352,7 @@ class PressureGradient(Operator):
         return derived[f"{self.field_p}_{self._dim_name}"]
 
 
+@register_operator("velocity_divergence")
 class VelocityDivergence(Operator):
     # ∇·u = u_x + v_y — incompressibility constraint
     def __init__(self, field_u="u", field_v="v"):
@@ -367,6 +379,7 @@ class VelocityDivergence(Operator):
 # Structural Mechanics Operators
 # ---------------------------------------------------------------------------
 
+@register_operator("strain_tensor")
 class StrainTensor(Operator):
     # ε = 0.5*(∇u + ∇uᵀ)
     # for 2D: εxx=ux_x, εyy=uy_y, εxy=0.5*(ux_y + uy_x)
@@ -394,6 +407,7 @@ class StrainTensor(Operator):
                      derived[f"{self.field_uy}_x"])
         return torch.cat([exx, eyy, exy], dim=-1)  # (N, 3)
 
+@register_operator("stress_tensor")
 class StressTensor(Operator):
     # σ = λ*tr(ε)*I + 2μ*ε — linear elasticity constitutive law
     # λ, μ: Lamé parameters
@@ -422,6 +436,7 @@ class StressTensor(Operator):
         sxy = 2*self.mu*exy
         return torch.cat([sxx, syy, sxy], dim=-1)  # (N, 3)
 
+@register_operator("elastic_equilibrium")
 class ElasticEquilibrium(Operator):
     # ∇·σ + f = 0
     # div(σ)_x = σxx_x + σxy_y
@@ -469,6 +484,7 @@ class ElasticEquilibrium(Operator):
 # Quantum Mechanics (Schrödinger) Operators
 # ---------------------------------------------------------------------------
 
+@register_operator("schrodinger_kinetic")
 class SchrodingerKinetic(Operator):
     # -ℏ²/2m * ∇²ψ — kinetic energy operator
     # split into real/imag: operates on both components
@@ -495,6 +511,7 @@ class SchrodingerKinetic(Operator):
         kin_imag = self.coeff * derived[f"{self.field_imag}_xx"]
         return torch.cat([kin_real, kin_imag], dim=-1)
 
+@register_operator("potential_term")
 class PotentialTerm(Operator):
     # V(x)*ψ — potential energy
     def __init__(self, potential_fn, field_real="psi_real",
@@ -520,6 +537,7 @@ class PotentialTerm(Operator):
         pot_imag = V * fields[self.field_imag]
         return torch.cat([pot_real, pot_imag], dim=-1)
 
+@register_operator("schrodinger_time")
 class SchrodingerTimeEvolution(Operator):
     # iℏ ∂ψ/∂t — left hand side of TDSE
     # real part: -ℏ * ψ_imag_t
@@ -548,6 +566,7 @@ class SchrodingerTimeEvolution(Operator):
         return torch.cat([lhs_real, lhs_imag], dim=-1)
 
 
+@register_operator("artificial_viscosity")
 class ArtificialViscosity(Operator):
     """
     Dynamic diffusion injected where |∇u| exceeds threshold.
@@ -601,4 +620,53 @@ class ArtificialViscosity(Operator):
         r = (grad_mag * mask)
         epsilon = self.epsilon_max * r / (r.max() + 1e-8)
 
+
         return epsilon * lap
+
+
+@register_operator("level_set")
+class LevelSetOperator(Operator):
+    """
+    Tracks interface via Level Set Equation: ∂φ/∂t + v·∇φ = 0.
+    Supports constant velocity, field-based velocity, or callable velocity.
+    """
+    def __init__(self, velocity: Union[str, torch.Tensor, Callable] = None, field: str = "phi", spatial_dims: int = None):
+        super().__init__(field=field)
+        self.velocity = velocity
+        self.spatial_dims = spatial_dims
+        self.gradient = Gradient(field=field, spatial_dims=spatial_dims)
+
+    def signature(self) -> Dict[str, Any]:
+        sig = self.gradient.signature()
+        reqs = sig["requires_derived"] + [f"{self.field}_t"]
+        return {
+            "inputs": [self.field],
+            "output": f"level_set({self.field})",
+            "order": 1,
+            "type": "interface_tracking",
+            "requires_derived": reqs
+        }
+
+    def forward(self, fields: Dict[str, torch.Tensor], coords: torch.Tensor, derived: Dict[str, torch.Tensor] = None) -> torch.Tensor:
+        phi_t = derived[f"{self.field}_t"]
+        grad_phi = self.gradient.forward(fields, coords, derived)
+        
+        # Determine velocity v
+        if isinstance(self.velocity, str):
+            v = fields[self.velocity]
+        elif callable(self.velocity):
+            # Callable expects (fields, coords, derived)
+            v = self.velocity(fields, coords, derived)
+        elif isinstance(self.velocity, torch.Tensor):
+            v = self.velocity
+        else:
+            v = torch.zeros_like(grad_phi) # Default to zero velocity
+            
+        # Advection term: v · ∇φ
+        # v: (N, D), grad_phi: (N, D)
+        # Ensure dimensions match
+        if v.shape[-1] > grad_phi.shape[-1]:
+            v = v[..., :grad_phi.shape[-1]]
+            
+        advection = torch.sum(v * grad_phi, dim=-1, keepdim=True)
+        return phi_t + advection

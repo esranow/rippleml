@@ -83,3 +83,41 @@ class PeriodicBC(BoundaryCondition):
             return torch.mean((u_left - u_right) ** 2)
             
         super().__init__(apply)
+
+class ParametricBoundary:
+    """
+    Boundary defined by a parametric curve (x(s), y(s)) or (x(s,t), y(s,t)).
+    """
+    def __init__(self, curve_fn: Callable, s_range: tuple, num_samples: int = 100):
+        """
+        Args:
+            curve_fn: Callable returning [x, y, ...] given parameter s (and optionally t).
+            s_range: (s_min, s_max)
+            num_samples: Default number of points to sample.
+        """
+        self.curve_fn = curve_fn
+        self.s_range = s_range
+        self.num_samples = num_samples
+
+    def sample(self, t: Optional[float] = None, num_points: Optional[int] = None) -> torch.Tensor:
+        n = num_points or self.num_samples
+        s = torch.linspace(self.s_range[0], self.s_range[1], n).reshape(-1, 1)
+        
+        # Check if curve_fn takes (s, t) or just (s)
+        import inspect
+        sig = inspect.signature(self.curve_fn)
+        if len(sig.parameters) >= 2 and t is not None:
+            t_tensor = torch.full_like(s, t)
+            points = self.curve_fn(s, t_tensor)
+        else:
+            points = self.curve_fn(s)
+            
+        if isinstance(points, (list, tuple)):
+            points = torch.cat([p.reshape(-1, 1) if isinstance(p, torch.Tensor) else torch.tensor(p).reshape(-1,1) for p in points], dim=-1)
+            
+        # Append time if points don't have it and t is provided
+        if t is not None and points.shape[-1] < (2 if len(sig.parameters) >= 2 else 2): # Simplified logic
+             # This depends on dimension, but for now let's assume we append t if missing
+             pass
+             
+        return points

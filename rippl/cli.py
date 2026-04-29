@@ -1,55 +1,86 @@
 import argparse
 import sys
+import os
 import yaml
-import logging
-from pathlib import Path
-from typing import Any, Dict
+import torch
+from rippl.api import train, simulate
+from rippl.models.registry import load_model
+from rippl.export.exporter import export_model
+from rippl.core.config import ConfigParser
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-
-def load_config(config_path: Path) -> Dict[str, Any]:
+def main():
     """
-    Load YAML configuration file.
-
-    Args:
-        config_path (Path): Path to the YAML config file.
-
-    Returns:
-        Dict[str, Any]: Loaded configuration dictionary.
+    Rippl CLI Entrypoint.
+    Provides commands for training, simulation, and model export.
     """
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    return config
-
-def main() -> None:
-    """
-    Main entry point for rippl CLI.
-    Parses arguments and initiates training.
-    """
-    parser = argparse.ArgumentParser(description="rippl CLI")
-    parser.add_argument(
-        "--config",
-        type=str,
-        required=True,
-        help="Path to the YAML configuration file."
+    parser = argparse.ArgumentParser(
+        description="Rippl: Modular Physics-ML Framework for Enterprise Wave PDEs",
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
+    subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
+
+    # Train command
+    train_parser = subparsers.add_parser("train", help="Train a PINN model from a configuration file")
+    train_parser.add_argument("config", help="Path to the YAML or JSON configuration file")
+    train_parser.add_argument("--output", "-o", default="checkpoint", help="Directory to save the trained model")
+
+    # Simulate command
+    sim_parser = subparsers.add_parser("simulate", help="Run inference or a numerical solver")
+    sim_parser.add_argument("config", help="Path to the configuration file")
+
+    # Export command
+    export_parser = subparsers.add_parser("export", help="Export a trained model to TorchScript or ONNX")
+    export_parser.add_argument("config", help="Path to the configuration file used for training")
+    export_parser.add_argument("model_dir", help="Directory containing the weights.pt and config.json")
+    export_parser.add_argument("--format", default="torchscript", choices=["torchscript", "onnx"], 
+                                help="Target export format (default: torchscript)")
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+
     args = parser.parse_args()
-    config_path = Path(args.config)
-    
-    if not config_path.exists():
-        logging.error(f"Config file not found at {config_path}")
+
+    try:
+        if args.command == "train":
+            print(f"[Rippl] Initializing training from {args.config}...")
+            model, results = train(args.config)
+            
+            # Save the model
+            os.makedirs(args.output, exist_ok=True)
+            torch.save(model.state_dict(), os.path.join(args.output, "weights.pt"))
+            
+            # Save model metadata for registry compatibility
+            full_config = ConfigParser.load(args.config)
+            model_metadata = {
+                "name": full_config["model"]["name"],
+                "model_config": full_config["model"]["config"],
+                "scales": results.get("meta", {}).get("scales", {})
+            }
+            ConfigParser.save(model_metadata, os.path.join(args.output, "config.json"))
+            
+            print(f"[Rippl] Training successful. Final Loss: {results['loss']:.4e}")
+            print(f"[Rippl] Model saved to {args.output}/")
+
+        elif args.command == "simulate":
+            print(f"[Rippl] Running simulation from {args.config}...")
+            result = simulate(args.config)
+            print(f"[Rippl] Simulation complete. Output tensor shape: {result.shape}")
+
+        elif args.command == "export":
+            print(f"[Rippl] Exporting model from {args.model_dir} to {args.format} format...")
+            model = load_model(args.model_dir)
+            
+            # Load metadata from training config
+            config = ConfigParser.load(args.config)
+            export_model(model, args.model_dir, format=args.format, metadata=config)
+            
+            print(f"[Rippl] Export successful. Artifacts located in {args.model_dir}/")
+
+    except Exception as e:
+        print(f"[Rippl ERROR] {str(e)}")
         sys.exit(1)
-        
-    config = load_config(config_path)
-    logging.info(f"Loaded configuration from {config_path}")
-    
-    # Import here to avoid circular imports
-    from rippl.training.engine import train_from_config
-    
-    # Delegate to training engine
-    train_from_config(config)
 
 if __name__ == "__main__":
     main()

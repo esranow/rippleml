@@ -127,3 +127,14 @@ class AnsatzFactory:
         """Zero flux at x=0 and x=1."""
         D = BoxDistance([(0,1)])
         return NeumannAnsatzWrapper(model, D, neumann_value=0.0)
+
+class TimeVaryingDistance(DistanceFunction):
+    """
+    Distance function that depends on time.
+    distance_fn_of_t: Callable[[coords], distance] where coords includes time.
+    """
+    def __init__(self, distance_fn_of_t):
+        self.fn = distance_fn_of_t
+
+    def __call__(self, coords: torch.Tensor) -> torch.Tensor:
+        return self.fn(coords)

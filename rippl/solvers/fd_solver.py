@@ -1,7 +1,9 @@
 import torch
 import torch.nn.functional as F
 from typing import Tuple, Optional
+from rippl.core.config import register_solver
 
+@register_solver("diffusion_fd_1d")
 def solve_diffusion_fd_1d(
     u0: torch.Tensor,
     steps: int,
@@ -36,6 +38,7 @@ def solve_diffusion_fd_1d(
         
     return torch.stack(history, dim=1)
 
+@register_solver("advection_fd_1d")
 def solve_advection_fd_1d(
     u0: torch.Tensor,
     steps: int,
@@ -78,6 +81,7 @@ def solve_advection_fd_1d(
         
     return torch.stack(history, dim=1)
 
+@register_solver("advdiff_fd_1d")
 def solve_advdiff_fd_1d(
     u0: torch.Tensor,
     steps: int,
@@ -116,6 +120,7 @@ def solve_advdiff_fd_1d(
         
     return torch.stack(history, dim=1)
 
+@register_solver("wave_fd_1d")
 def solve_wave_fd_1d(
     u0: torch.Tensor, 
     v0: torch.Tensor, 
@@ -194,6 +199,7 @@ def solve_wave_fd_1d(
         
     return torch.stack(history, dim=1)
 
+@register_solver("wave_fd_2d")
 def solve_wave_fd_2d(
     u0: torch.Tensor, 
     v0: torch.Tensor, 
@@ -262,6 +268,7 @@ def solve_wave_fd_2d(
         u_curr = u_next
         
     return torch.stack(history, dim=1)
+@register_solver("reaction_diffusion_fd_1d")
 def solve_reaction_diffusion_fd_1d(
     u0: torch.Tensor,
     steps: int,
@@ -309,6 +316,7 @@ def solve_reaction_diffusion_fd_1d(
         u_curr = u_next
         
     return torch.stack(history, dim=1)
+@register_solver("damped_wave_fd_1d")
 def solve_damped_wave_fd_1d(
     u0: torch.Tensor,
     v0: torch.Tensor,

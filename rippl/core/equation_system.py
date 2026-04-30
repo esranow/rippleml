@@ -25,7 +25,7 @@ class EquationSystem:
         # 1. Collect all required derivatives from ALL equations
         all_requests = []
         for eq in self.equations:
-            for _, op in eq.terms:
+            for coeff, op in eq.terms:
                 sig = op.signature()
                 all_requests.extend(sig.get("requires_derived", []))
         

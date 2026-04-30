@@ -17,10 +17,16 @@ class Equation:
 
     def __init__(
         self,
-        terms: List[Tuple[float, Operator]],
+        terms: List[Union[Operator, Tuple[float, Operator]]],
         forcing=None,
     ):
-        self.terms = terms
+        # Standardize to List[Tuple[float, Operator]]
+        self.terms = []
+        for item in terms:
+            if isinstance(item, tuple):
+                self.terms.append(item)
+            else:
+                self.terms.append((1.0, item))
         self.forcing = forcing  # callable(params) -> tensor | None
 
     def residual(self, field: torch.Tensor, params: Dict[str, Any]) -> torch.Tensor: # field: (N, 1)
@@ -39,7 +45,7 @@ class Equation:
         
         # 1. Collect all required derivatives from operators
         all_requests = []
-        for _, op in self.terms:
+        for coeff, op in self.terms:
             sig = op.signature()
             all_requests.extend(sig.get("requires_derived", []))
         

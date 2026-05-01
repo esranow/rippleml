@@ -22,6 +22,11 @@ class Engine:
         self.net = torch.compile(self.net, backend=backend, mode=mode)
         return self
 
+    def save(self, path: str, format="safetensors"):
+        from rippl.core.artifact import ArtifactCompiler
+        compiler = ArtifactCompiler(self)
+        compiler.save(path, format=format)
+
     def validate(self, render=False):
         diag_dir = Path(".rpx_diagnostics")
         diag_dir.mkdir(parents=True, exist_ok=True)

@@ -45,23 +45,57 @@ def main():
     try:
         if args.command == "train":
             print(f"[Rippl] Initializing training from {args.config}...")
-            model, results = train(args.config)
             
-            # Save the model
-            os.makedirs(args.output, exist_ok=True)
-            torch.save(model.state_dict(), os.path.join(args.output, "weights.pt"))
+            with open(args.config, 'r') as f:
+                raw_cfg = yaml.safe_load(f)
+                
+            from rippl.config.models import DomainConfig, EquationConfig, OperatorConfig
             
-            # Save model metadata for registry compatibility
-            full_config = ConfigParser.load(args.config)
-            model_metadata = {
-                "name": full_config["model"]["name"],
-                "model_config": full_config["model"]["config"],
-                "scales": results.get("meta", {}).get("scales", {})
-            }
-            ConfigParser.save(model_metadata, os.path.join(args.output, "config.json"))
+            # 2. Enforce strict Pydantic validation before PyTorch logic
+            if "domain" in raw_cfg:
+                DomainConfig(**raw_cfg["domain"])
+            if "equation" in raw_cfg:
+                EquationConfig(**raw_cfg["equation"])
+            if "operators" in raw_cfg:
+                for op in raw_cfg["operators"]:
+                    OperatorConfig(**op)
             
-            print(f"[Rippl] Training successful. Final Loss: {results['loss']:.4e}")
-            print(f"[Rippl] Model saved to {args.output}/")
+            # 3 & 4. Handle Neural Network IoC
+            model_cfg = raw_cfg.get("model", {})
+            if "script" in model_cfg and "class_name" in model_cfg:
+                import importlib.util
+                script_path = model_cfg["script"]
+                class_name = model_cfg["class_name"]
+                
+                spec = importlib.util.spec_from_file_location("custom_model", script_path)
+                custom_module = importlib.util.module_from_spec(spec)
+                sys.modules["custom_model"] = custom_module
+                spec.loader.exec_module(custom_module)
+                
+                model_cls = getattr(custom_module, class_name)
+                kwargs = {k: v for k, v in model_cfg.items() if k not in ["script", "class_name", "type"]}
+                net = model_cls(**kwargs)
+            else:
+                import rippl.nn as rnn
+                model_type = model_cfg.get("type", "MLP")
+                model_cls = getattr(rnn, model_type)
+                kwargs = {k: v for k, v in model_cfg.items() if k != "type"}
+                net = model_cls(**kwargs)
+                
+            from rippl.core.engine import Engine
+            engine = Engine(net)
+            
+            # 5. Compile, fit, and save
+            engine.compile()
+            
+            epochs = raw_cfg.get("training", {}).get("epochs", 10)
+            engine.fit(epochs=epochs, **raw_cfg.get("training", {}))
+            
+            engine.validate()
+            
+            engine.save("output.rpx")
+            
+            print(f"[Rippl] Training successful. Model saved to output.rpx")
 
         elif args.command == "simulate":
             print(f"[Rippl] Running simulation from {args.config}...")

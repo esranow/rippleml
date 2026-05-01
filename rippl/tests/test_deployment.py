@@ -1,10 +1,8 @@
 import torch, os, shutil
 import torch.nn as nn
-from rippl.models.registry import register_model, build_model, load_model
 from rippl.logging.logger import RipplLogger
 from rippl.export.exporter import export_model
 
-@register_model("test_mlp")
 class TestMLP(nn.Module):
     def __init__(self, d_in=2, d_out=1):
         super().__init__()
@@ -13,7 +11,7 @@ class TestMLP(nn.Module):
 
 def test_registry():
     cfg = {"d_in": 2, "d_out": 1}
-    m = build_model("test_mlp", cfg)
+    m = TestMLP(**cfg)
     assert isinstance(m, TestMLP)
     
     path = "test_model_dir"
@@ -23,7 +21,8 @@ def test_registry():
         json.dump({"name": "test_mlp", "model_config": cfg}, f)
     torch.save(m.state_dict(), f"{path}/weights.pt")
     
-    m2 = load_model(path)
+    m2 = TestMLP(**cfg)
+    m2.load_state_dict(torch.load(f"{path}/weights.pt", weights_only=True))
     assert isinstance(m2, TestMLP)
     shutil.rmtree(path)
 

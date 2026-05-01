@@ -2,7 +2,7 @@ import pytest
 import torch
 import numpy as np
 import random
-from rippl.models.registry import build_model, register_model, _MODEL_REGISTRY
+import rippl.nn as rnn
 
 # Set deterministic flags
 torch.manual_seed(0)
@@ -20,18 +20,8 @@ def common_config():
         "num_points": 100
     }
 
-def test_registry():
-    """
-    Test that models are registered.
-    """
-    assert "mlp" in _MODEL_REGISTRY
-    assert "fourier_mlp" in _MODEL_REGISTRY
-    assert "siren" in _MODEL_REGISTRY
-    assert "fno1d" in _MODEL_REGISTRY
-    assert "fno2d" in _MODEL_REGISTRY
-
 def test_mlp(common_config):
-    model = build_model("mlp", {
+    model = rnn.MLP(**{
         "input_dim": common_config["input_dim"],
         "output_dim": common_config["output_dim"],
         "hidden_layers": common_config["hidden_layers"],
@@ -41,11 +31,10 @@ def test_mlp(common_config):
     B, N = common_config["batch_size"], common_config["num_points"]
     x = torch.randn(B, N, common_config["input_dim"])
     y = model(x)
-    
     assert y.shape == (B, N, common_config["output_dim"])
 
 def test_fourier_mlp(common_config):
-    model = build_model("fourier_mlp", {
+    model = rnn.FourierMLP(**{
         "input_dim": common_config["input_dim"],
         "output_dim": common_config["output_dim"],
         "hidden_layers": common_config["hidden_layers"],
@@ -56,11 +45,10 @@ def test_fourier_mlp(common_config):
     B, N = common_config["batch_size"], common_config["num_points"]
     x = torch.randn(B, N, common_config["input_dim"])
     y = model(x)
-    
     assert y.shape == (B, N, common_config["output_dim"])
 
 def test_siren(common_config):
-    model = build_model("siren", {
+    model = rnn.Siren(**{
         "input_dim": common_config["input_dim"],
         "output_dim": common_config["output_dim"],
         "hidden_layers": common_config["hidden_layers"],
@@ -70,11 +58,10 @@ def test_siren(common_config):
     B, N = common_config["batch_size"], common_config["num_points"]
     x = torch.randn(B, N, common_config["input_dim"])
     y = model(x)
-    
     assert y.shape == (B, N, common_config["output_dim"])
 
 def test_fno1d(common_config):
-    model = build_model("fno1d", {
+    model = rnn.FNO1d(**{
         "input_dim": common_config["input_dim"],
         "output_dim": common_config["output_dim"],
         "modes": 16,
@@ -85,7 +72,6 @@ def test_fno1d(common_config):
     B, N = common_config["batch_size"], 100
     x = torch.randn(B, N, common_config["input_dim"])
     y = model(x)
-    
     assert y.shape == (B, N, common_config["output_dim"])
 
 def test_fno2d():
@@ -94,7 +80,7 @@ def test_fno2d():
     input_dim = 3
     output_dim = 1
     
-    model = build_model("fno2d", {
+    model = rnn.FNO2d(**{
         "input_dim": input_dim,
         "output_dim": output_dim,
         "modes1": 8,
@@ -107,6 +93,4 @@ def test_fno2d():
     B = 2
     x = torch.randn(B, N, input_dim)
     y = model(x)
-    
     assert y.shape == (B, N, output_dim)
-

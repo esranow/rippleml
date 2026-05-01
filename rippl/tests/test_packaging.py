@@ -7,12 +7,12 @@ def test_rippl_import():
 
 def test_physics_blocks_import():
     """Verify that key physics blocks can be imported from the namespace."""
-    from rippl.physics_blocks import HybridLaplacianBlock, HybridWaveResidualBlock
+    from rippl.nn import HybridLaplacianBlock, HybridWaveResidualBlock
     assert HybridLaplacianBlock is not None
     assert HybridWaveResidualBlock is not None
 
 def test_block_instantiation():
     """Verify basic instantiation of a core block."""
-    from rippl.physics_blocks import HybridLaplacianBlock
+    from rippl.nn import HybridLaplacianBlock
     block = HybridLaplacianBlock(mode="point", correction_hidden=16)
     assert block.mode == "point"

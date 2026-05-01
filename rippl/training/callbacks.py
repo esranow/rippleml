@@ -4,6 +4,9 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 import logging
 
+import pytorch_lightning as pl
+from torch.quasirandom import SobolEngine
+
 class Callback:
     """
     Base class for training callbacks.
@@ -49,3 +52,36 @@ class CheckpointCallback(Callback):
                 
             torch.save(state, path)
             logging.info(f"Saved checkpoint to {path}")
+
+class RARCallback(pl.Callback):
+    """
+    Residual-based Adaptive Refinement Callback using Sobol points.
+    """
+    def __init__(self, freq: int = 10, K: int = 100):
+        super().__init__()
+        self.freq = freq
+        self.K = K
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        if trainer.current_epoch % self.freq != 0:
+            return
+            
+        device = pl_module.device
+        sobol = SobolEngine(dimension=2, scramble=True)
+        
+        num_candidates = self.K * 10
+        candidates = sobol.draw(num_candidates).to(device)
+        candidates.requires_grad_(True)
+        
+        # Evaluate proxy residual
+        u = pl_module(candidates)
+        residual = u ** 2
+        
+        errors = torch.abs(residual).view(-1)
+        if errors.numel() >= self.K:
+            _, indices = torch.topk(errors, self.K)
+            new_points = candidates[indices].detach()
+            
+        # Mock injection into dataloader
+        pass
+

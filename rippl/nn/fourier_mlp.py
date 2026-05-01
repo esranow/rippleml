@@ -2,10 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 from typing import List, Dict, Any, Optional
-from rippl.models.registry import register_model
 from rippl.models.mlp import MLP
 
-@register_model("fourier_mlp")
 class FourierMLP(nn.Module):
     """
     MLP with Random Fourier Feature Mapping.

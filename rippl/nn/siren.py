@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 from typing import List, Dict, Any
-from rippl.models.registry import register_model
 
 class SineLayer(nn.Module):
     """
@@ -34,7 +33,6 @@ class SineLayer(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.sin(self.omega_0 * self.linear(x))
 
-@register_model("siren")
 class Siren(nn.Module):
     """
     Sinusoidal Representation Network (SIREN).

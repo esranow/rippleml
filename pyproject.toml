@@ -16,8 +16,9 @@ dependencies = [
     "torch>=2.0",
     "pyyaml",
     "numpy",
-    "matplotlib",
     "pandas>=1.5",
+    "safetensors",
+    "pydantic"
 ]
 
 [project.optional-dependencies]
@@ -31,12 +32,23 @@ dev = [
 fractional = [
     "scipy>=1.10",
 ]
+distributed = [
+    "pytorch-lightning"
+]
+visualization = [
+    "matplotlib"
+]
+all = [
+    "pytorch-lightning",
+    "matplotlib",
+    "huggingface_hub"
+]
 
 [project.scripts]
 rippl = "rippl.cli:main"
 
 [tool.setuptools]
-packages = ["rippl", "rippl.core", "rippl.physics", "rippl.solvers", "rippl.training", "rippl.models", "rippl.physics_blocks", "rippl.operators", "rippl.io", "rippl.datasets", "rippl.diagnostics"]
+packages = ["rippl", "rippl.core", "rippl.physics", "rippl.solvers", "rippl.training", "rippl.nn", "rippl.config", "rippl.operators", "rippl.io", "rippl.datasets", "rippl.diagnostics"]
 
 [tool.pytest.ini_options]
 testpaths = ["rippl/tests"]

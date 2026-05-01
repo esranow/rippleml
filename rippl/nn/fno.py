@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.fft
 from typing import List, Dict, Any, Tuple
-from rippl.models.registry import register_model
 
 class SpectralConv1d(nn.Module):
     """
@@ -45,7 +44,6 @@ class SpectralConv1d(nn.Module):
         x = torch.fft.irfft(out_ft, n=x.size(-1))
         return x
 
-@register_model("fno1d")
 class FNO1d(nn.Module):
     """
     1D Fourier Neural Operator.
@@ -131,7 +129,6 @@ class SpectralConv2d(nn.Module):
         x = torch.fft.irfft2(out_ft, s=(x.size(-2), x.size(-1)))
         return x
 
-@register_model("fno2d")
 class FNO2d(nn.Module):
     """
     2D Fourier Neural Operator.
@@ -192,7 +189,6 @@ class FNO2d(nn.Module):
         
         return x
 
-@register_model("fno")
 class FNO(nn.Module):
     def __init__(
         self,

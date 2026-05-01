@@ -2,7 +2,7 @@ import pytest
 import torch
 import shutil
 from pathlib import Path
-from rippl.training.engine import train_from_config
+from rippl.core.engine import Engine
 
 # Clean up checkoints after test
 @pytest.fixture
@@ -36,7 +36,7 @@ def test_train_pinn_flow(clean_checkpoints):
         }
     }
     
-    train_from_config(config)
+    Engine(config.get("model", {})).fit(epochs=1)
     
     # Assert checkpoint exists
     assert Path("test_checkpoints/model_epoch_1.pt").exists()
@@ -67,7 +67,7 @@ def test_train_operator_flow(clean_checkpoints):
         }
     }
     
-    train_from_config(config)
+    Engine(config.get("model", {})).fit(epochs=1)
     
     # Epoch 2 saved
     assert Path("test_checkpoints/model_epoch_2.pt").exists()

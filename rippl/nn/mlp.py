@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 from typing import List, Union, Dict, Any
-from rippl.models.registry import register_model
 
-@register_model("mlp")
 class MLP(nn.Module):
     """
     Multi-Layer Perceptron (MLP) supporting (B, N, F) input.

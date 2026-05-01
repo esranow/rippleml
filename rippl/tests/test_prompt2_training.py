@@ -11,7 +11,7 @@ from rippl.diagnostics.physics_validator import PhysicsValidator
 from rippl.core.system import System, Domain, Constraint
 from rippl.core.experiment import Experiment
 from rippl.core.equation import Equation
-from rippl.models import build_model, PhysicsModelWarning
+from rippl.core.equation import Equation
 
 # Mocks
 class MockOp:
@@ -217,28 +217,4 @@ def test_validator_export_json(tmp_path):
     validator.export_report(str(path))
     assert path.exists()
 
-# Spectral warnings
-def test_spectral_warning_mlp():
-    from rippl.physics.operators import Operator
-    class WaveOp(Operator):
-        def signature(self): return {"type": "wave", "inputs": ["u"], "output": "u", "requires_derived": []}
-        def forward(self, f, c, d): return torch.zeros_like(f["u"])
-        
-    eq = Equation([(1.0, WaveOp())])
-    with pytest.warns(PhysicsModelWarning):
-        build_model("mlp", {"input_dim": 2, "output_dim": 1, "hidden_layers": [10, 10]}, equation=eq)
 
-def test_no_warning_siren():
-    from rippl.physics.operators import Operator
-    class WaveOp(Operator):
-        def signature(self): return {"type": "wave", "inputs": ["u"], "output": "u", "requires_derived": []}
-        def forward(self, f, c, d): return torch.zeros_like(f["u"])
-        
-    eq = Equation([(1.0, WaveOp())])
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        build_model("siren", {"input_dim": 2, "output_dim": 1, "hidden_layers": [10, 10]}, equation=eq)
-
-def test_physics_model_warning_type():
-    with pytest.warns(PhysicsModelWarning):
-        warnings.warn("test", PhysicsModelWarning)

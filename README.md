@@ -1,8 +1,5 @@
-> **Note:** Python package namespace is `ripple`. Distribution name is `rippl`. 
-> Import as `import ripple`.
-
 # Rippl
-### The FastAPI of SciML | Differentiable Physics Engine for PyTorch
+### Differentiable Physics Engine for PyTorch
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![PyPI Version](https://img.shields.io/badge/pypi-v0.0.1-blue)

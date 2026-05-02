@@ -32,6 +32,19 @@ class Domain:
         coords = torch.stack(grid, dim=-1)
         return coords, spacings
 
+    def generate_loader(self, batch_size: int = 2048):
+        from torch.utils.data import DataLoader, TensorDataset
+        import torch
+        # Sobol sampling over domain bounds including time if present
+        sobol = torch.quasirandom.SobolEngine(len(self.bounds), scramble=True)
+        n_points = max(batch_size * 10, 50000)
+        pts = sobol.draw(n_points)
+        # Scale to actual bounds
+        for i, (lo, hi) in enumerate(self.bounds):
+            pts[:, i] = pts[:, i] * (hi - lo) + lo
+        dataset = TensorDataset(pts)
+        return DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
 
 @dataclass
 class Constraint:

@@ -33,7 +33,7 @@ fractional = [
     "scipy>=1.10",
 ]
 distributed = [
-    "pytorch-lightning"
+    "pytorch-lightning>=2.0"
 ]
 visualization = [
     "matplotlib"

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Union
 
 class ReferenceScales:
     """
@@ -137,3 +137,38 @@ class NondimModelWrapper(torch.nn.Module):
             return {k: self.scales.denormalize_field(v, self.field_types.get(k, "generic"))
                     for k, v in out.items()}
         return self.scales.denormalize_field(out, "generic")
+
+
+class AutoScaler:
+    def __init__(self, L0: float = 1.0, U0: float = 1.0, T0: float = None, spatial_dims: int = None):
+        self.L0 = L0
+        self.U0 = U0
+        self.T0 = T0 if T0 is not None else L0 / U0
+        self.spatial_dims = spatial_dims
+
+    @classmethod
+    def from_domain_equation(cls, domain, equation) -> "AutoScaler":
+        # Infer L0 from domain bounds — no new attributes on Domain required
+        L0 = max(b[1] - b[0] for b in domain.bounds if len(b) == 2)
+        # U0 defaults to 1.0 — user overrides via ReferenceScales if needed
+        U0 = getattr(equation, "characteristic_velocity", 1.0)
+        spatial_dims = getattr(domain, "spatial_dims", None)
+        return cls(L0=L0, U0=U0, spatial_dims=spatial_dims)
+
+    def get_state(self) -> dict:
+        return {"L0": self.L0, "U0": self.U0, "T0": self.T0}
+
+    def scale_inputs(self, coords: torch.Tensor) -> torch.Tensor:
+        scaled = coords.clone()
+        if self.spatial_dims is not None and coords.shape[-1] > self.spatial_dims:
+            scaled[..., :self.spatial_dims] /= self.L0
+            scaled[..., self.spatial_dims:] /= self.T0
+        else:
+            scaled /= self.L0
+        return scaled
+
+    def scale_outputs(self, u: Union[torch.Tensor, Dict[str, torch.Tensor]]) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
+        if isinstance(u, dict):
+            return {k: v * self.U0 for k, v in u.items()}
+        return u * self.U0
+

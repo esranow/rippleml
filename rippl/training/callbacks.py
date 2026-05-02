@@ -4,7 +4,11 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 import logging
 
-import pytorch_lightning as pl
+try:
+    import pytorch_lightning as pl
+    HAS_LIGHTNING = True
+except ImportError:
+    HAS_LIGHTNING = False
 from torch.quasirandom import SobolEngine
 
 class Callback:
@@ -53,7 +57,7 @@ class CheckpointCallback(Callback):
             torch.save(state, path)
             logging.info(f"Saved checkpoint to {path}")
 
-class RARCallback(pl.Callback):
+class RARCallback(pl.Callback if HAS_LIGHTNING else object):
     """
     Residual-based Adaptive Refinement Callback using Sobol points.
     """

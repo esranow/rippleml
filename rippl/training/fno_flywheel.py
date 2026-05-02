@@ -4,7 +4,7 @@ rippl.training.fno_flywheel — Operator Learning Flywheel (FD Solver -> FNO).
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
-from rippl.models.fno import FNO
+from rippl.nn.fno import FNO
 from rippl.core.operator_experiment import OperatorDataset, OperatorExperiment
 from rippl.solvers.fd_solver import solve_diffusion_fd_1d
 

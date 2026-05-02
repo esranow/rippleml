@@ -3,8 +3,8 @@ import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List
-from rippl.models.siren import Siren
-from rippl.physics_blocks.residual import HybridWaveResidualBlock
+from rippl.nn.siren import Siren
+from rippl.nn.residual import HybridWaveResidualBlock
 from rippl.core.system import Constraint, Domain
 from rippl.physics.equation import Equation
 from rippl.physics.operators import TimeDerivative, Laplacian

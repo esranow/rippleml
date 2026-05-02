@@ -7,7 +7,7 @@ from rippl.data.sensor import SensorDataset, MultiFidelityFusion
 from rippl.core.system import System, Domain
 from rippl.physics.operators import TimeDerivative, Laplacian
 from rippl.core.equation import Equation
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 
 def main():
     # 1. High-Fidelity Data (Sparse, No Noise)

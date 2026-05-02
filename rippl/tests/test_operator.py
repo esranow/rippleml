@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from rippl.operators.grid_utils import flatten_grid, unflatten_grid
 from rippl.operators.operator_mode import OperatorTrainer
-from rippl.models.fno import FNO1d
+from rippl.nn.fno import FNO1d
 
 torch.manual_seed(42)
 

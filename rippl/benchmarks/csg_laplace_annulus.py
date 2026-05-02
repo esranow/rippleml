@@ -7,7 +7,7 @@ from rippl.core.system import System, Constraint
 from rippl.physics.operators import Laplacian
 from rippl.core.equation import Equation
 from rippl.geometry.csg import Annulus, CSGDomain
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 from rippl.core.experiment import Experiment
 
 def main():

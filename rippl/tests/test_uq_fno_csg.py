@@ -4,7 +4,7 @@ import pytest
 import os
 from rippl.training.uq import MCDropoutWrapper, DeepEnsemble, UncertaintyQuantifier, ProbabilisticExperiment
 from rippl.training.fno_flywheel import FNOFlywheel
-from rippl.models.fno import FNO
+from rippl.nn.fno import FNO
 from rippl.core.system import System, Domain
 from rippl.core.equation import Equation
 from rippl.core.operator_experiment import OperatorExperiment

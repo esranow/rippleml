@@ -2,7 +2,7 @@ import torch
 from rippl.physics.equation import Equation
 from rippl.core.equation_system import EquationSystem
 from rippl.physics.operators import SchrodingerKinetic, PotentialTerm, SchrodingerTimeEvolution
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 
 class SchrodingerSystem:
     def __init__(self, potential_fn, hbar=1.0, mass=1.0, dims=1):

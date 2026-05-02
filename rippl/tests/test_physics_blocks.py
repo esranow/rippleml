@@ -1,5 +1,5 @@
 """
-Comprehensive tests for rippl.physics_blocks.
+Comprehensive tests for rippl.nn.
 
 Each test sets seeds for determinism, runs on CPU, and should complete in <10s.
 """
@@ -26,7 +26,7 @@ def seed_all():
 class TestHybridLaplacianBlock:
     def test_point_mode_analytic_sine(self):
         """Laplacian of sin(πx) should be −π² sin(πx)."""
-        from rippl.physics_blocks.laplacian import HybridLaplacianBlock
+        from rippl.nn.laplacian import HybridLaplacianBlock
 
         block = HybridLaplacianBlock(mode="point", use_correction=False,
                                       correction_input_dim=2)
@@ -40,7 +40,7 @@ class TestHybridLaplacianBlock:
             f"Max err: {(lap - expected).abs().max().item()}"
 
     def test_point_mode_shape(self):
-        from rippl.physics_blocks.laplacian import HybridLaplacianBlock
+        from rippl.nn.laplacian import HybridLaplacianBlock
 
         block = HybridLaplacianBlock(mode="point", correction_input_dim=2)
         x = torch.rand(2, 20, 1, requires_grad=True)
@@ -49,7 +49,7 @@ class TestHybridLaplacianBlock:
         assert out.shape == (2, 20, 1)
 
     def test_grid_mode_1d_shape(self):
-        from rippl.physics_blocks.laplacian import HybridLaplacianBlock
+        from rippl.nn.laplacian import HybridLaplacianBlock
 
         block = HybridLaplacianBlock(mode="grid", spatial_dim=1)
         u = torch.randn(2, 1, 32)
@@ -57,7 +57,7 @@ class TestHybridLaplacianBlock:
         assert out.shape == (2, 1, 32)
 
     def test_grid_mode_2d_shape(self):
-        from rippl.physics_blocks.laplacian import HybridLaplacianBlock
+        from rippl.nn.laplacian import HybridLaplacianBlock
 
         block = HybridLaplacianBlock(mode="grid", spatial_dim=2, use_correction=False)
         u = torch.randn(2, 1, 16, 16)
@@ -71,7 +71,7 @@ class TestHybridLaplacianBlock:
 class TestHybridWaveResidualBlock:
     def test_residual_near_zero_on_analytic_wave(self):
         """u = sin(πx)cos(πt), c=1: wave eq residual should be ≈ 0."""
-        from rippl.physics_blocks.residual import HybridWaveResidualBlock
+        from rippl.nn.residual import HybridWaveResidualBlock
         from rippl.physics.equation import Equation
         from rippl.physics.operators import TimeDerivative, Laplacian
 
@@ -86,7 +86,7 @@ class TestHybridWaveResidualBlock:
             f"Residual too large: {res.abs().max().item()}"
 
     def test_loss_returns_scalar(self):
-        from rippl.physics_blocks.residual import HybridWaveResidualBlock
+        from rippl.nn.residual import HybridWaveResidualBlock
         from rippl.physics.equation import Equation
         from rippl.physics.operators import TimeDerivative, Laplacian
 
@@ -98,7 +98,7 @@ class TestHybridWaveResidualBlock:
         assert loss.shape == ()
 
     def test_forward_shape(self):
-        from rippl.physics_blocks.residual import HybridWaveResidualBlock
+        from rippl.nn.residual import HybridWaveResidualBlock
         from rippl.physics.equation import Equation
         from rippl.physics.operators import TimeDerivative, Laplacian
 
@@ -115,7 +115,7 @@ class TestHybridWaveResidualBlock:
 # ===================================================================== #
 class TestSpectralHybridBlock:
     def test_forward_shape(self):
-        from rippl.physics_blocks.spectral import SpectralHybridBlock
+        from rippl.nn.spectral import SpectralHybridBlock
 
         block = SpectralHybridBlock(n_modes=64, cutoff=8)
         u = torch.randn(2, 64)
@@ -123,7 +123,7 @@ class TestSpectralHybridBlock:
         assert out.shape == (2, 64)
 
     def test_spectral_energy_preserved_no_correction(self):
-        from rippl.physics_blocks.spectral import SpectralHybridBlock
+        from rippl.nn.spectral import SpectralHybridBlock
 
         block = SpectralHybridBlock(n_modes=64, cutoff=None, use_correction=False)
         u = torch.randn(2, 64)
@@ -136,7 +136,7 @@ class TestSpectralHybridBlock:
             f"Energy mismatch: {e_in.item()} vs {e_out.item()}"
 
     def test_get_spectrum(self):
-        from rippl.physics_blocks.spectral import SpectralHybridBlock
+        from rippl.nn.spectral import SpectralHybridBlock
 
         block = SpectralHybridBlock(n_modes=32)
         u = torch.randn(1, 32)
@@ -149,7 +149,7 @@ class TestSpectralHybridBlock:
 # ===================================================================== #
 class TestEnergyAwareBlock:
     def test_energy_and_gating_shape(self):
-        from rippl.physics_blocks.energy import EnergyAwareBlock
+        from rippl.nn.energy import EnergyAwareBlock
 
         block = EnergyAwareBlock(c=1.0, spatial_dim=1)
         coords = torch.rand(2, 30, 2, requires_grad=True)
@@ -159,7 +159,7 @@ class TestEnergyAwareBlock:
         assert penalty.shape == ()
 
     def test_energy_computation(self):
-        from rippl.physics_blocks.energy import EnergyAwareBlock
+        from rippl.nn.energy import EnergyAwareBlock
 
         block = EnergyAwareBlock(c=1.0)
         coords = torch.rand(1, 20, 2, requires_grad=True)
@@ -174,7 +174,7 @@ class TestEnergyAwareBlock:
 # ===================================================================== #
 class TestHybridOscillatorBlock:
     def test_step_shape(self):
-        from rippl.physics_blocks.oscillator import HybridOscillatorBlock
+        from rippl.nn.oscillator import HybridOscillatorBlock
 
         block = HybridOscillatorBlock(omega=1.0, alpha=0.0)
         state = torch.randn(4, 2)
@@ -182,7 +182,7 @@ class TestHybridOscillatorBlock:
         assert next_state.shape == (4, 2)
 
     def test_forward_dynamics(self):
-        from rippl.physics_blocks.oscillator import HybridOscillatorBlock
+        from rippl.nn.oscillator import HybridOscillatorBlock
 
         block = HybridOscillatorBlock(omega=1.0, alpha=0.0, use_correction=False)
         state = torch.tensor([[1.0, 0.0]])
@@ -196,7 +196,7 @@ class TestHybridOscillatorBlock:
 # ===================================================================== #
 class TestPDEParameterEmbeddingBlock:
     def test_embedding_shape(self):
-        from rippl.physics_blocks.embedding import PDEParameterEmbeddingBlock
+        from rippl.nn.embedding import PDEParameterEmbeddingBlock
 
         block = PDEParameterEmbeddingBlock(param_dim=3, embed_dim=16, feature_dim=32)
         params = torch.randn(4, 3)
@@ -204,7 +204,7 @@ class TestPDEParameterEmbeddingBlock:
         assert emb.shape == (4, 16)
 
     def test_film_modulation_shape(self):
-        from rippl.physics_blocks.embedding import PDEParameterEmbeddingBlock
+        from rippl.nn.embedding import PDEParameterEmbeddingBlock
 
         block = PDEParameterEmbeddingBlock(param_dim=3, embed_dim=16, feature_dim=32)
         params = torch.randn(4, 3)
@@ -218,7 +218,7 @@ class TestPDEParameterEmbeddingBlock:
 # ===================================================================== #
 class TestHybridGradientBlock:
     def test_gradient_shape(self):
-        from rippl.physics_blocks.gradient import HybridGradientBlock
+        from rippl.nn.gradient import HybridGradientBlock
 
         block = HybridGradientBlock(spatial_dim=2, use_correction=False)
         coords = torch.rand(2, 20, 2, requires_grad=True)
@@ -232,7 +232,7 @@ class TestHybridGradientBlock:
 # ===================================================================== #
 class TestBoundaryConditionBlock:
     def test_dirichlet_enforcement(self):
-        from rippl.physics_blocks.boundary_block import BoundaryConditionBlock
+        from rippl.nn.boundary_block import BoundaryConditionBlock
 
         block = BoundaryConditionBlock(bc_type="dirichlet", bc_value=0.0,
                                         use_correction=False)
@@ -243,7 +243,7 @@ class TestBoundaryConditionBlock:
         assert out[0, 0, 0].item() < 0.5  # near left boundary
 
     def test_periodic_shape(self):
-        from rippl.physics_blocks.boundary_block import BoundaryConditionBlock
+        from rippl.nn.boundary_block import BoundaryConditionBlock
 
         block = BoundaryConditionBlock(bc_type="periodic", use_correction=False)
         x = torch.linspace(-1, 1, 30).reshape(1, 30, 1)
@@ -257,7 +257,7 @@ class TestBoundaryConditionBlock:
 # ===================================================================== #
 class TestHamiltonianBlock:
     def test_step_shape(self):
-        from rippl.physics_blocks.hamiltonian import HamiltonianBlock
+        from rippl.nn.hamiltonian import HamiltonianBlock
 
         block = HamiltonianBlock(state_dim=1)
         state = torch.randn(4, 2)
@@ -265,7 +265,7 @@ class TestHamiltonianBlock:
         assert out.shape == (4, 2)
 
     def test_hamiltonian_scalar(self):
-        from rippl.physics_blocks.hamiltonian import HamiltonianBlock
+        from rippl.nn.hamiltonian import HamiltonianBlock
 
         block = HamiltonianBlock(state_dim=2)
         q = torch.randn(3, 2)
@@ -279,7 +279,7 @@ class TestHamiltonianBlock:
 # ===================================================================== #
 class TestSpectralRegularizationBlock:
     def test_penalty_higher_for_noisy(self):
-        from rippl.physics_blocks.spectral_reg import SpectralRegularizationBlock
+        from rippl.nn.spectral_reg import SpectralRegularizationBlock
 
         block = SpectralRegularizationBlock(cutoff=4)
         clean = torch.sin(torch.linspace(0, 2 * math.pi, 64)).unsqueeze(0)
@@ -294,7 +294,7 @@ class TestSpectralRegularizationBlock:
 # ===================================================================== #
 class TestMultiScaleFourierFeatureBlock:
     def test_output_shape(self):
-        from rippl.physics_blocks.multiscale_ff import MultiScaleFourierFeatureBlock
+        from rippl.nn.multiscale_ff import MultiScaleFourierFeatureBlock
 
         block = MultiScaleFourierFeatureBlock(input_dim=2, n_scales=3,
                                                features_per_scale=8)
@@ -309,7 +309,7 @@ class TestMultiScaleFourierFeatureBlock:
 # ===================================================================== #
 class TestSpectralConvBlock:
     def test_forward_shape(self):
-        from rippl.physics_blocks.spectral_conv import SpectralConvBlock
+        from rippl.nn.spectral_conv import SpectralConvBlock
 
         block = SpectralConvBlock(in_channels=1, out_channels=2, modes=8)
         u = torch.randn(2, 1, 32)
@@ -322,7 +322,7 @@ class TestSpectralConvBlock:
 # ===================================================================== #
 class TestHybridTimeStepperBlock:
     def test_step_shape(self):
-        from rippl.physics_blocks.hybrid_stepper import HybridTimeStepperBlock
+        from rippl.nn.hybrid_stepper import HybridTimeStepperBlock
 
         block = HybridTimeStepperBlock(state_dim=3, method="euler")
         u = torch.randn(4, 3)
@@ -330,7 +330,7 @@ class TestHybridTimeStepperBlock:
         assert out.shape == (4, 3)
 
     def test_rk2_accuracy(self):
-        from rippl.physics_blocks.hybrid_stepper import HybridTimeStepperBlock
+        from rippl.nn.hybrid_stepper import HybridTimeStepperBlock
 
         block = HybridTimeStepperBlock(state_dim=1, method="rk2",
                                         use_correction=False)
@@ -346,7 +346,7 @@ class TestHybridTimeStepperBlock:
 # ===================================================================== #
 class TestAdaptiveSamplingBlock:
     def test_weights_shape_and_sum(self):
-        from rippl.physics_blocks.adaptivesampler import AdaptiveSamplingBlock
+        from rippl.nn.adaptivesampler import AdaptiveSamplingBlock
 
         block = AdaptiveSamplingBlock(input_dim=2, use_correction=False)
         x = torch.rand(2, 30, 1, requires_grad=True)
@@ -362,7 +362,7 @@ class TestAdaptiveSamplingBlock:
 # ===================================================================== #
 class TestConservationConstraintBlock:
     def test_mass_conservation(self):
-        from rippl.physics_blocks.conservation_block import ConservationConstraintBlock
+        from rippl.nn.conservation_block import ConservationConstraintBlock
 
         block = ConservationConstraintBlock(mode="mass", use_correction=False)
         u = torch.randn(2, 30, 1)
@@ -377,7 +377,7 @@ class TestConservationConstraintBlock:
 # ===================================================================== #
 class TestOperatorWrapperBlock:
     def test_forward_shape(self):
-        from rippl.physics_blocks.nn_operator_wrapper import OperatorWrapperBlock
+        from rippl.nn.nn_operator_wrapper import OperatorWrapperBlock
 
         block = OperatorWrapperBlock(grid_shape=(32,), in_channels=1, out_channels=1)
         coords = torch.rand(2, 20, 1)
@@ -392,9 +392,9 @@ class TestOperatorWrapperBlock:
 class TestCrossBlockPipeline:
     def test_laplacian_spectral_energy_pipeline(self):
         """Chain laplacian → spectral → energy blocks."""
-        from rippl.physics_blocks.laplacian import HybridLaplacianBlock
-        from rippl.physics_blocks.spectral import SpectralHybridBlock
-        from rippl.physics_blocks.energy import EnergyAwareBlock
+        from rippl.nn.laplacian import HybridLaplacianBlock
+        from rippl.nn.spectral import SpectralHybridBlock
+        from rippl.nn.energy import EnergyAwareBlock
 
         # 1) Laplacian on grid
         lap_block = HybridLaplacianBlock(mode="grid", spatial_dim=1,
@@ -419,8 +419,8 @@ class TestCrossBlockPipeline:
 
     def test_gradient_residual_pipeline(self):
         """Chain gradient + wave residual blocks."""
-        from rippl.physics_blocks.gradient import HybridGradientBlock
-        from rippl.physics_blocks.residual import HybridWaveResidualBlock
+        from rippl.nn.gradient import HybridGradientBlock
+        from rippl.nn.residual import HybridWaveResidualBlock
         from rippl.physics.equation import Equation
         from rippl.physics.operators import TimeDerivative, Laplacian
 
@@ -438,8 +438,8 @@ class TestCrossBlockPipeline:
 
     def test_embedding_modulates_spectral_conv(self):
         """Embedding block modulates spectral conv features."""
-        from rippl.physics_blocks.embedding import PDEParameterEmbeddingBlock
-        from rippl.physics_blocks.spectral_conv import SpectralConvBlock
+        from rippl.nn.embedding import PDEParameterEmbeddingBlock
+        from rippl.nn.spectral_conv import SpectralConvBlock
 
         emb_block = PDEParameterEmbeddingBlock(param_dim=2, embed_dim=8,
                                                  feature_dim=16)
@@ -457,8 +457,8 @@ class TestCrossBlockPipeline:
 
     def test_stepper_with_oscillator(self):
         """Chain oscillator dynamics through the time stepper."""
-        from rippl.physics_blocks.oscillator import HybridOscillatorBlock
-        from rippl.physics_blocks.hybrid_stepper import HybridTimeStepperBlock
+        from rippl.nn.oscillator import HybridOscillatorBlock
+        from rippl.nn.hybrid_stepper import HybridTimeStepperBlock
 
         osc = HybridOscillatorBlock(omega=1.0, alpha=0.0, use_correction=False)
         stepper = HybridTimeStepperBlock(state_dim=2, method="rk2",

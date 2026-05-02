@@ -1,6 +1,6 @@
 import torch
 import math
-from rippl.models.fno import FNO
+from rippl.nn.fno import FNO
 from rippl.core.operator_experiment import OperatorDataset, OperatorExperiment
 
 def generate_heat_data(n_samples=1000, n_points=64, alpha=0.01, t=1.0):

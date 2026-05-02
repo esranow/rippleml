@@ -5,7 +5,7 @@ from rippl.core.system import System, Domain, Constraint
 from rippl.physics.equation import Equation
 from rippl.core.equation_system import EquationSystem
 from rippl.core.exceptions import RipplValidationError
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 
 def test_operator_signatures():
     """1. Test that all operators have correct signatures."""

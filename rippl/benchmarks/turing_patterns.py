@@ -4,7 +4,7 @@ rippl.benchmarks.turing_patterns — Gray-Scott Turing Patterns.
 import torch
 from rippl.core.system import System, Domain, Constraint
 from rippl.physics.reaction_diffusion import TuringSystem
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 from rippl.core.experiment import Experiment
 
 def main():

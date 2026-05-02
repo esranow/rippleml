@@ -4,7 +4,7 @@ import os
 import yaml
 import torch
 from rippl.api import train, simulate
-from rippl.models.registry import load_model
+from rippl.nn.registry import load_model
 from rippl.export.exporter import export_model
 from rippl.core.config import ConfigParser
 

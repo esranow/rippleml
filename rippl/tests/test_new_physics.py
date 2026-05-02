@@ -14,7 +14,7 @@ from rippl.physics.distance import BoxDistance, HardConstraintWrapper, NeumannAn
 from rippl.data.sensor import SensorDataset, MultiFidelityFusion
 from rippl.core.equation import Equation
 from rippl.core.equation_system import EquationSystem
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 from rippl.core.exceptions import PhysicsModelWarning
 
 # --- Feature 1: Non-dimensionalization ---

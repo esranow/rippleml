@@ -5,7 +5,7 @@ Equation: D^0.5_t u = Laplacian(u)
 import torch
 from rippl.core.system import System, Domain, Constraint
 from rippl.physics.fractional import FractionalSystem
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 from rippl.core.experiment import Experiment
 
 def main():

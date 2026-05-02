@@ -4,7 +4,7 @@ rippl.benchmarks.allen_cahn_1d — 1D Allen-Cahn equation.
 import torch
 from rippl.core.system import System, Domain, Constraint
 from rippl.physics.phase_field import PhaseFieldSystem
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 from rippl.core.experiment import Experiment
 
 def main():

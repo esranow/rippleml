@@ -5,7 +5,7 @@ Equation: |∇V| = 1
 import torch
 from rippl.core.system import System, Domain, Constraint
 from rippl.physics.hamilton_jacobi import HJSystem
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 from rippl.core.experiment import Experiment
 
 def main():

@@ -8,7 +8,7 @@ from rippl.core.system import System, Domain, Constraint
 from rippl.physics.operators import TimeDerivative, Laplacian
 from rippl.core.equation import Equation
 from rippl.training.uq import ProbabilisticExperiment
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 
 def main():
     # 1. Physics Definition

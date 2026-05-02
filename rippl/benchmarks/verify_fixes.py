@@ -22,7 +22,7 @@ err = (result - expected).abs().max().item()
 print(f"Laplacian spatial-only test: {err:.2e} {'PASS' if err < 1e-3 else 'FAIL'}")
 
 # Test 2: Physics sanity — wave equation residual on analytic solution
-from rippl.physics_blocks.residual import HybridWaveResidualBlock
+from rippl.nn.residual import HybridWaveResidualBlock
 from rippl.core.equation import Equation as Eq
 
 coords2 = torch.rand(1000, 2, requires_grad=True)

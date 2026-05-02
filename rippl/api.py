@@ -4,7 +4,7 @@ from typing import Union, Dict, Any, Optional, Tuple
 from rippl.core.config import ConfigParser
 from rippl.core.system import System
 from rippl.core.experiment import Experiment
-from rippl.models.registry import build_model, load_model
+from rippl.nn.registry import build_model, load_model
 from rippl.export.exporter import export_model
 
 def train(config_path_or_dict: Union[str, Dict[str, Any]]) -> Tuple[torch.nn.Module, Dict[str, Any]]:

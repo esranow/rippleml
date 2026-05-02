@@ -6,7 +6,7 @@ import numpy as np
 from rippl.core.system import System, Domain
 from rippl.physics.operators import TimeDerivative, Laplacian
 from rippl.core.equation import Equation
-from rippl.models.fno import FNO
+from rippl.nn.fno import FNO
 from rippl.training.fno_flywheel import FNOFlywheel
 
 def main():

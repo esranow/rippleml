@@ -11,7 +11,7 @@ from rippl.physics.operators import Laplacian, Gradient
 from rippl.physics.equation import Equation
 from rippl.core.equation_system import EquationSystem
 from rippl.core.system import System, Domain, Constraint
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 from rippl.core.experiment import Experiment
 
 def main():

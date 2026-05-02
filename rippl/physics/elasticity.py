@@ -2,7 +2,7 @@ import torch
 from rippl.core.equation_system import EquationSystem
 from rippl.physics.equation import Equation
 from rippl.physics.operators import ElasticEquilibrium
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 
 class LinearElasticitySystem:
     def __init__(self, E=1.0, nu=0.3, dims=2,

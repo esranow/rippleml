@@ -5,7 +5,7 @@ from rippl.physics.operators import (
     TimeDerivative, Laplacian, NonlinearAdvection, 
     PressureGradient, VelocityDivergence
 )
-from rippl.models.multi_field_mlp import MultiFieldMLP
+from rippl.nn.multi_field_mlp import MultiFieldMLP
 
 # GAUGE CONDITION REQUIRED: Pressure in incompressible NS is only unique
 # up to a constant. Always add a Constraint fixing p at one boundary point.

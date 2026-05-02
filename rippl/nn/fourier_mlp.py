@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from typing import List, Dict, Any, Optional
-from rippl.models.mlp import MLP
+from rippl.nn.mlp import MLP
 
 class FourierMLP(nn.Module):
     """

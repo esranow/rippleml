@@ -5,7 +5,7 @@ from rippl.physics.distance import BoxDistance, HardConstraintWrapper
 from rippl.training.adaptive_sampler import AdaptiveCollocationSampler
 from rippl.core.inverse import InverseParameter, InverseProblem
 from rippl.core.operator_experiment import OperatorDataset, OperatorExperiment
-from rippl.models.fno import FNO
+from rippl.nn.fno import FNO
 from rippl.core.system import System, Domain, Constraint
 from rippl.physics.equation import Equation
 from rippl.physics.operators import Laplacian

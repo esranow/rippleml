@@ -17,52 +17,26 @@ so you don't have to.
 ---
 ## 7 Lines
 ```python
-import rippl as rp
-import rippl.nn as rnn
+import rippl
+import rippl.nn as nn
 
-model  = rnn.MLP(in_dim=2, out_dim=1)
-engine = rp.compile(model)
-result = rp.run(domain, equation, engine,
+model  = nn.MLP(in_dim=2, out_dim=1)
+engine = rippl.compile(model)
+result = rippl.run(domain, equation, engine,
                 causal=True, adaptive_loss=True, hard_bcs=True)
 ```
 
+---
 ## Install
 ```bash
 pip install rippl
 ```
 
-## Physics
-```python
-from rippl.core.system import System, Domain, Constraint
-from rippl.core.equation import Equation
-from rippl.physics.operators import TimeDerivative, Diffusion
+---
+## Multi-GPU & Enterprise
+Multi-GPU DDP training, `auto.rippl` tokenized orchestrators, and 3D STL mesh ingestion are handled via the `rippl-pro` proprietary extension. 
+API keys and cloud compute available at **[lwly.io](https://lwly.io)**
 
-# Heat equation: ∂u/∂t = 0.1 ∂²u/∂x²
-system = System(
-    equation=Equation([TimeDerivative(1), Diffusion(alpha=0.1)]),
-    domain=Domain(spatial_dims=1, bounds=[(0,1),(0,1)]),
-    constraints=[...],
-    fields=["u"]
-)
-```
-
-**Supported:** Wave · Heat · Burgers · Navier-Stokes · Elasticity ·
-Schrödinger · Allen-Cahn · Cahn-Hilliard · Eikonal · Hamilton-Jacobi ·
-Turing patterns · FitzHugh-Nagumo · Brusselator · Fractional PDEs
-
-## Features
-- **Causal training** — wave equation at L2=8.38e-05. Diverges without it.
-- **NTK adaptive weighting** — 3x improvement over fixed weights
-- **Hard BCs** — exact Dirichlet enforcement via ansatz, no penalty tuning
-- **Spectral collocation** — Chebyshev/Legendre for smooth problems
-- **Digital Twin** — identify PDE parameters from sensor CSV data
-- **UQ** — MC Dropout confidence intervals
-- **CSG geometry** — annulus, sphere, boolean operations
-- **Auto-Migrate** — transpile DeepXDE scripts to rippl
-
-## Multi-GPU
-Multi-GPU training and managed cloud compute available at
-[lwly.io](https://lwly.io)
-
+---
 ## License
 Apache 2.0 — see [LICENSE](LICENSE)

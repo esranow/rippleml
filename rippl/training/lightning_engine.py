@@ -60,13 +60,13 @@ if HAS_LIGHTNING:
                 
                 if self.causal and self._phase == "adam":
                     # compute pointwise residuals before reduction
+                    from rippl.training.causal import CausalTrainingMixin
+                    mixin = CausalTrainingMixin()
+                    
                     pointwise_res = self.equation.compute_pointwise_residual(
                         {"u": u_phys} if not isinstance(u_phys, dict) else u_phys, c
                     )
                     
-                    # apply causal weights
-                    from rippl.training.causal import CausalTrainingMixin
-                    mixin = CausalTrainingMixin()
                     if self.causal_mode == "continuous":
                         weights = mixin.compute_causal_weights_continuous(
                             c, pointwise_res, epsilon=self.causal_epsilon
@@ -81,19 +81,10 @@ if HAS_LIGHTNING:
                     res = self.equation.compute_residual(u_phys, c)
                     pde_loss = res.pow(2).mean() if res.shape[-1] == 1 else res.pow(2).sum(dim=-1).mean()
                 
-                # Mock constraints for now unless we integrate actual system constraint data
                 ic_loss = torch.tensor(0.0, device=coords.device, requires_grad=True)
                 bc_loss = torch.tensor(0.0, device=coords.device, requires_grad=True)
                 
-                if self.hard_bcs:
-                    bc_loss = torch.tensor(0.0, device=coords.device, requires_grad=True)
-                
-                loss_dict = {
-                    "pde": pde_loss,
-                    "ic": ic_loss,
-                    "bc": bc_loss
-                }
-
+                loss_dict = {"pde": pde_loss, "ic": ic_loss, "bc": bc_loss}
                 total_loss = sum(loss_dict.values())
                 
                 if self.adaptive_loss:
@@ -139,4 +130,4 @@ if HAS_LIGHTNING:
 else:
     class LightningEngine:
         def __init__(self, *args, **kwargs):
-            raise ImportError("pytorch-lightning required. pip install rippl[distributed]")
+            raise ImportError("pytorch-lightning required.")

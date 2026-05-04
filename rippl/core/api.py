@@ -5,7 +5,6 @@ from typing import Any, Dict, Union
 
 
 class RipplProRequired(PermissionError):
-    """Raised when a feature requires rippl-pro."""
     pass
 
 _API_KEY = os.getenv("RIPPL_API_KEY", None)
@@ -63,12 +62,20 @@ def run(domain_or_system: Any, equation_or_model: Any = None, model: torch.nn.Mo
         precision: str = "bf16-mixed", epochs: int = 10000,
         **kwargs) -> Dict[str, Any]:
     
-    # Pro gate — DDP requires rippl-pro
     if devices not in ("auto", 1, "1") or strategy == "ddp":
-        raise RipplProRequired(
-            "Multi-GPU training requires rippl-pro. "
-            "Get access at lwly.io"
-        )
+        try:
+            import rippl_pro
+            rippl_pro.verify_license()
+            # Note: We need to resolve domain/equation/model here if they were passed positionally
+            # to match the run() signature expectations of the pro extension
+            from rippl.core.system import System
+            if isinstance(domain_or_system, System):
+                d, e, m = domain_or_system.domain, domain_or_system.equation, equation_or_model
+            else:
+                d, e, m = domain_or_system, equation_or_model, model
+            return rippl_pro.run_ddp(d, e, m, devices=devices, **kwargs)
+        except ImportError:
+            raise RipplProRequired("Multi-GPU training requires the rippl-pro extension. Get access at [https://lwly.io](https://lwly.io)")
 
     from rippl.core.system import System
     if isinstance(domain_or_system, System):

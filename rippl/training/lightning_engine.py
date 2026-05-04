@@ -51,7 +51,6 @@ if HAS_LIGHTNING:
         def training_step(self, batch, batch_idx):
             coords = batch[0]
             adam_opt, lbfgs_opt = self.optimizers()
-            is_ddp = self.trainer.num_devices > 1
 
             def compute_loss():
                 c = coords.requires_grad_(True)
@@ -118,7 +117,7 @@ if HAS_LIGHTNING:
                         self._phase = "lbfgs"
                         self._lbfgs_count = 0
                         
-                self.log("pde_loss", pde_loss, prog_bar=True, sync_dist=is_ddp)
+                self.log("pde_loss", pde_loss, prog_bar=True)
                 self.final_loss = total.item()
 
             elif self._phase == "lbfgs":

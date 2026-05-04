@@ -110,7 +110,7 @@ def test_lightning_engine_training_step():
     scaler = AutoScaler.from_domain_equation(domain, equation)
     
     engine = LightningEngine(model=model, equation=equation, scaler=scaler)
-    engine.trainer = pl.Trainer(accelerator="cpu", strategy="auto", devices=1)
+    engine.trainer = pl.Trainer(accelerator="cpu", devices=1)
     
     # dummy batch
     batch = [torch.rand(10, 2)]

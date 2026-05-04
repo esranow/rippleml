@@ -16,3 +16,14 @@ env/
 *.bak
 *.swp
 *.swo
+
+# Pro features
+rippl_pro/
+*.rpl
+*.rpx.key
+
+# Artifacts
+*.ipynb_checkpoints/
+scratch/
+temp_*/
+checkpoints/

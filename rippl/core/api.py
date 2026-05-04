@@ -3,6 +3,11 @@ import os
 import warnings
 from typing import Any, Dict, Union
 
+
+class RipplProRequired(PermissionError):
+    """Raised when a feature requires rippl-pro."""
+    pass
+
 _API_KEY = os.getenv("RIPPL_API_KEY", None)
 
 def authenticate(api_key: str):
@@ -58,6 +63,13 @@ def run(domain_or_system: Any, equation_or_model: Any = None, model: torch.nn.Mo
         precision: str = "bf16-mixed", epochs: int = 10000,
         **kwargs) -> Dict[str, Any]:
     
+    # Pro gate — DDP requires rippl-pro
+    if devices not in ("auto", 1, "1") or strategy == "ddp":
+        raise RipplProRequired(
+            "Multi-GPU training requires rippl-pro. "
+            "Get access at lwly.io"
+        )
+
     from rippl.core.system import System
     if isinstance(domain_or_system, System):
         system = domain_or_system
@@ -85,14 +97,12 @@ def run(domain_or_system: Any, equation_or_model: Any = None, model: torch.nn.Mo
     try:
         import pytorch_lightning as pl
         from rippl.training.lightning_engine import LightningEngine
-        return _run_lightning(domain, equation, model, strategy, devices, 
-                       precision, epochs, kwargs)
+        return _run_lightning(domain, equation, model, precision, epochs, kwargs)
     except ImportError:
         from rippl.training.pinn_recipe import PINNTrainingRecipe
         return _run_native(domain, equation, model, epochs, kwargs)
 
-def _run_lightning(domain, equation, model, strategy, devices, 
-                   precision, epochs, kwargs):
+def _run_lightning(domain, equation, model, precision, epochs, kwargs):
     import pytorch_lightning as pl
     from rippl.training.lightning_engine import LightningEngine
     from rippl.core.nondim import AutoScaler
@@ -110,7 +120,8 @@ def _run_lightning(domain, equation, model, strategy, devices,
                              adaptive_loss_mode=kwargs.get("adaptive_loss_mode", "gradient_norm"),
                              adaptive_loss_freq=kwargs.get("adaptive_loss_freq", 100),
                              hard_bcs=kwargs.get("hard_bcs", False))
-    trainer = pl.Trainer(max_epochs=epochs, strategy=strategy, devices=devices,
+    # Single-GPU only — DDP available in rippl-pro
+    trainer = pl.Trainer(max_epochs=epochs, devices=1,
                          precision=precision, enable_checkpointing=False, logger=False,
                          callbacks=kwargs.get("callbacks", []))
     

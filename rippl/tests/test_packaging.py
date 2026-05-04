@@ -3,7 +3,7 @@ import pytest
 def test_rippl_import():
     """Verify that the rippl package is importable."""
     import rippl
-    assert rippl.__version__ == "0.0.1"
+    assert rippl.__version__ == "0.3.0"
 
 def test_physics_blocks_import():
     """Verify that key physics blocks can be imported from the namespace."""

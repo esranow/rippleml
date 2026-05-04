@@ -56,21 +56,13 @@ class Engine:
         return diag_dir
 
     def fit(self, epochs: int, mode="pinn", use_amp=False, multi_gpu=False, **kwargs):
-        try:
-            import pytorch_lightning as pl
-            from rippl.training.lightning import RipplLightningEngine
-            from rippl.training.callbacks import RARCallback
-            if multi_gpu:
-                trainer = pl.Trainer(
-                    max_epochs=epochs, 
-                    strategy="ddp",
-                    callbacks=[RARCallback(freq=10, K=100)]
-                )
-                lightning_module = RipplLightningEngine(self.net)
-                trainer.fit(lightning_module)
-                return
-        except ImportError:
-            pass
+        if multi_gpu:
+            from rippl.core.api import RipplProRequired
+            raise RipplProRequired(
+                "Multi-GPU training requires rippl-pro. "
+                "Get access at lwly.io"
+            )
+
 
         # Raw PyTorch loop single-GPU fallback
         device = next(self.net.parameters()).device

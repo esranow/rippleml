@@ -10,7 +10,7 @@ def test_package_version_exists():
     """
     assert hasattr(rippl, "__version__")
     assert isinstance(rippl.__version__, str)
-    assert rippl.__version__ == "0.0.1"
+    assert rippl.__version__ == "0.3.0"
 
 def test_deterministic_seed():
     """
